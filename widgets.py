@@ -1,3 +1,5 @@
+import os.path
+
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -6,7 +8,13 @@ FONT = QFont()
 FONT.setFamily("Microsoft YaHei UI")
 FONT.setPointSize(12)
 
-
+class CursorChangeButton(QPushButton):
+    def enterEvent(self, a0: QMoveEvent) -> None:
+        self.setCursor(Qt.PointingHandCursor)
+        super().enterEvent(a0)
+    def leaveEvent(self, a0: QEvent) -> None:
+        self.setCursor(Qt.ArrowCursor)
+        super().leaveEvent(a0)
 class LineNumPaint(QWidget):
     def __init__(self, q_edit, parents=None):
         super().__init__(parents)
@@ -55,7 +63,7 @@ class PlainTextEditWithLineNum(QPlainTextEdit):
         self.lineNumberArea.update()
 
     def lineNumberAreaWidth(self):
-        block_count = self.document().blockCount()
+        block_count = self.document().blockCount()+100
         max_value = max(1, block_count)
         d_count = len(str(max_value))
         _width = self.fontMetrics().width('9') * d_count + 5
@@ -88,7 +96,7 @@ class PlainTextEditWithLineNum(QPlainTextEdit):
         painter.setFont(FONT)
         painter.setBackground(QColor("rgb(255, 255, 255)"))
 
-        painter.fillRect(event.rect(), Qt.lightGray)
+        # painter.fillRect(event.rect(), Qt.white)
         line_height = self.fontMetrics().lineSpacing()  # 包含行间距的行高
 
         block_number = self.cursorForPosition(QPoint(0, int(line_height / 2))).blockNumber()
@@ -120,16 +128,61 @@ class TextEdit(QFrame):
         self.parents = parents
         self.text = PlainTextEditWithLineNum(self)
         # self.text.resize(self.width(), self.height())
-        self.text.resize(self.parents.width() - 150, self.parents.height())
+        self.text.resize(self.parents.width() - 150, self.parents.height() - 70)
         self.text.move(int(self.text.lineNumberArea.width() / 5), 0)
         self.append = self.text.appendPlainText
         self.setText = self.text.setPlainText
         self.toText = self.text.toPlainText
-        stp = QScrollBar(self)
-        stp.resize(20, self.text.height() - 25)
-        stp.move(self.text.width() - 25, 0)
-        self.text.setHorizontalScrollBar(stp)
+        # stp = QScrollBar(self)
+        # stp.resize(20, self.text.height() - 25)
+        # stp.move(self.text.width() - 25, 0)
+        # self.text.setHorizontalScrollBar(stp)
 
     def resize(self, *__args):
         super().resize(*__args)
         self.text.resize(*__args)
+
+
+class TabButtonWidget(QWidget):
+
+    def __init__(self):
+        super(TabButtonWidget, self).__init__()
+        # Create button's
+        self.button_add = CursorChangeButton("  ×", self)
+        self.button_add.setFont(FONT)
+        self.button_add.setStyleSheet("background-color:rgba(0, 0, 0, 0)")
+        # Set button size
+        self.button_add.setFixedSize(30, 30)
+        # Create layout
+        self.layout = QVBoxLayout()
+        self.layout.setSpacing(0)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        # Add button's to layout
+        self.layout.addWidget(self.button_add)
+        # Use layout in widget
+        self.setLayout(self.layout)
+class Setting(QScrollArea):
+    def __init__(self, parents:QMainWindow):
+        super().__init__(parents)
+        parents.setWindowTitle("python记事本 - 设置")
+        self.parents = parents
+        self.setFrameShape(QFrame.NoFrame)
+        self.resize(parents.width(),parents.height())
+        self.setStyleSheet("background-color:rgba(255, 255, 255, 1)")
+        exit_=CursorChangeButton("←",self)
+        font=QFont()
+        font.setFamily("Microsoft YaHei UI")
+        font.setPointSize(30)
+        font.setBold(True)
+        exit_.setFont(font)
+        exit_.resize(60,60)
+        exit_.move(20,20)
+        exit_.setStyleSheet("background-color:rgba(0, 0, 0, 0)")
+        exit_.clicked.connect(self.exit)
+        lb=QLabel("python记事本 - 设置",self)
+        lb.setFont(font)
+        lb.move(100,5)
+        self.show()
+    def exit(self):
+        self.parents.setWindowTitle(f"python记事本 - {os.path.basename(self.parents.paths[self.parents.note.currentIndex()])}")
+        self.hide()
