@@ -1,20 +1,11 @@
 import os.path
 import time
-
+from constants import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
-FONT = QFont()
-FONT.setFamily("Microsoft YaHei UI")
-FONT.setPointSize(12)
-LINECOLOR = "#E5E5FF"
-FOREGROUNDLINECOLOR = "#000000"
-SELECTIONCOLOR = "#97C6EB"
-SELECTIONFOREGROUNDCOLOR = "#000000"
-STYLE_SHEET = ('background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0.03, y2:1, '
-              '''stop:0 rgba(253, 253, 253, 255), stop:1 rgba(238, 238, 238, 255));
-                 border:1px solid rgba(0, 0, 0, 0.1); border-radius:5px;''')
+
 
 
 class CursorChangeButton(QPushButton):
@@ -108,7 +99,7 @@ class PlainTextEditWithLineNum(QPlainTextEdit):
         painter = QPainter(self.lineNumberArea)
         painter.setFont(FONT)
 
-        # painter.fillRect(event.rect(), Qt.white)
+        painter.fillRect(event.rect(), QColor(LINENUMBERCOLOR))
         line_height = self.fontMetrics().lineSpacing()  # 包含行间距的行高
 
         block_number = self.cursorForPosition(QPoint(0, int(line_height / 2))).blockNumber()
@@ -126,7 +117,7 @@ class PlainTextEditWithLineNum(QPlainTextEdit):
             # cur_line_count = block.lineCount()
             if block.isVisible():
                 number = str(blockNumber + 1)
-                painter.setPen(Qt.black)
+                painter.setPen(QColor(LINENUMBERFOREGROUNDCOLOR))
                 # print((0, top, self.lineNumberArea.width(), height), number)
                 painter.drawText(0, top, self.lineNumberArea.width(), height, Qt.AlignCenter, number)
             block = block.next()
@@ -142,10 +133,12 @@ class TextEdit(QFrame):
         # self.text.resize(self.width(), self.height())
         self.text.resize(self.parents.width() - 150, self.parents.height() - 70)
         self.text.move(int(self.text.lineNumberArea.width() / 5), 0)
+        self.setFrameShape(QFrame.NoFrame)
         self.append = self.text.appendPlainText
         self.setText = self.text.setPlainText
         self.toText = self.text.toPlainText
         self.textCursor = self.text.textCursor
+        self.clear = self.text.clear
         # stp = QScrollBar(self)
         # stp.resize(20, self.text.height() - 25)
         # stp.move(self.text.width() - 25, 0)
@@ -160,13 +153,14 @@ class TabButtonWidget(QWidget):
 
     def __init__(self, parents=None, index=0):
         super(TabButtonWidget, self).__init__()
+        self.index = index
         # Create button's
         self.button_add = CursorChangeButton("  ×", self)
         self.button_add.setFont(FONT)
         self.button_add.setStyleSheet("background-color:rgba(0, 0, 0, 0)")
         # Set button size
         self.button_add.setFixedSize(30, 30)
-        self.button_add.clicked.connect(lambda: parents.close_tab(index))
+        self.button_add.clicked.connect(lambda: parents.close_tab(self.index))
         # Create layout
         self.layout = QVBoxLayout()
         self.layout.setSpacing(0)
@@ -290,7 +284,7 @@ class Setting(Window):
         change_foreground_line_color.move(950, 180)
         change_foreground_line_color.clicked.connect(self.change_foreground_line_color)
         change_foreground_line_color.setStyleSheet(STYLE_SHEET)
-        self._foreground_selection_line_color = QLabel(f"行选择前景色: {SELECTIONFOREGROUNDCOLOR.upper()}", self)
+        self._foreground_selection_line_color = QLabel(f"被选择前景色: {SELECTIONFOREGROUNDCOLOR.upper()}", self)
         # line_color.setStyleSheet(f"color: {LINECOLOR};")
         self._foreground_selection_line_color.move(100, 260)
         self._foreground_selection_line_color.setFont(FONT)
@@ -304,7 +298,7 @@ class Setting(Window):
         change_foreground_selection_line_color.move(950, 260)
         change_foreground_selection_line_color.clicked.connect(self.change_foreground_selection_line_color)
         change_foreground_selection_line_color.setStyleSheet(STYLE_SHEET)
-        self._selection_line_color = QLabel(f"行选择颜色: {SELECTIONCOLOR.upper()}", self)
+        self._selection_line_color = QLabel(f"被选择颜色: {SELECTIONCOLOR.upper()}", self)
         # line_color.setStyleSheet(f"color: {LINECOLOR};")
         self._selection_line_color.move(100, 220)
         self._selection_line_color.setFont(FONT)
@@ -318,13 +312,113 @@ class Setting(Window):
         change_selection_line_color.move(950, 220)
         change_selection_line_color.clicked.connect(self.change_selection_line_color)
         change_selection_line_color.setStyleSheet(STYLE_SHEET)
+        self._linenumber_color = QLabel(f"行号颜色: {LINENUMBERCOLOR.upper()}", self)
+        # line_color.setStyleSheet(f"color: {LINECOLOR};")
+        self._linenumber_color.move(100, 300)
+        self._linenumber_color.setFont(FONT)
+        self._linenumber_color.resize(280, 30)
+        self.linenumber_color = QLabel("████████████████████████████", self)
+        self.linenumber_color.move(380, 300)
+        self.linenumber_color.setStyleSheet(f"color: {LINENUMBERCOLOR};")
+        self.linenumber_color.setFont(FONT)
+        change_linenumber_color = CursorChangeButton("更改颜色", self)
+        change_linenumber_color.setFont(FONT)
+        change_linenumber_color.move(950, 300)
+        change_linenumber_color.clicked.connect(self.change_linenumber_color)
+        change_linenumber_color.setStyleSheet(STYLE_SHEET)
+        self._foreground_linenumber_color = QLabel(f"行号前景色: {LINENUMBERFOREGROUNDCOLOR.upper()}", self)
+        # line_color.setStyleSheet(f"color: {LINECOLOR};")
+        self._foreground_linenumber_color.move(100, 340)
+        self._foreground_linenumber_color.setFont(FONT)
+        self._foreground_linenumber_color.resize(280, 30)
+        self.foreground_linenumber_color = QLabel("████████████████████████████", self)
+        self.foreground_linenumber_color.move(380, 340)
+        self.foreground_linenumber_color.setStyleSheet(f"color: {LINENUMBERFOREGROUNDCOLOR};")
+        self.foreground_linenumber_color.setFont(FONT)
+        change_foreground_linenumber_color = CursorChangeButton("更改颜色", self)
+        change_foreground_linenumber_color.setFont(FONT)
+        change_foreground_linenumber_color.move(950, 340)
+        change_foreground_linenumber_color.clicked.connect(self.change_foreground_linenumber_color)
+        change_foreground_linenumber_color.setStyleSheet(STYLE_SHEET)
+        self._text_color = QLabel(f"文本框颜色: {TEXTCOLOR.upper()}", self)
+        # line_color.setStyleSheet(f"color: {LINECOLOR};")
+        self._text_color.move(100, 380)
+        self._text_color.setFont(FONT)
+        self._text_color.resize(280, 30)
+        self.text_color = QLabel("████████████████████████████", self)
+        self.text_color.move(380, 380)
+        self.text_color.setStyleSheet(f"color: {TEXTCOLOR};")
+        self.text_color.setFont(FONT)
+        change_text_color = CursorChangeButton("更改颜色", self)
+        change_text_color.setFont(FONT)
+        change_text_color.move(950, 380)
+        change_text_color.clicked.connect(self.change_text_color)
+        change_text_color.setStyleSheet(STYLE_SHEET)
+        self._foreground_text_color = QLabel(f"文本框前景色: {TEXTFOREGROUNDCOLOR.upper()}", self)
+        # line_color.setStyleSheet(f"color: {LINECOLOR};")
+        self._foreground_text_color.move(100, 420)
+        self._foreground_text_color.setFont(FONT)
+        self._foreground_text_color.resize(280, 30)
+        self.foreground_text_color = QLabel("████████████████████████████", self)
+        self.foreground_text_color.move(380, 420)
+        self.foreground_text_color.setStyleSheet(f"color: {TEXTFOREGROUNDCOLOR};")
+        self.foreground_text_color.setFont(FONT)
+        change_foreground_text_color = CursorChangeButton("更改颜色", self)
+        change_foreground_text_color.setFont(FONT)
+        change_foreground_text_color.move(950, 420)
+        change_foreground_text_color.clicked.connect(self.change_foreground_text_color)
+        change_foreground_text_color.setStyleSheet(STYLE_SHEET)
         self.show()
+
+    def change_linenumber_color(self):
+        global LINENUMBERCOLOR
+        msg_widget = QWidget()
+        msg_widget.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
+        color: QColor = QColorDialog.getColor(QColor(LINENUMBERCOLOR), msg_widget, "python记事本 - 颜色")
+        LINENUMBERCOLOR = color.name()
+        self.linenumber_color.setStyleSheet(f"color: {LINENUMBERCOLOR};")
+        self._linenumber_color.setText(f"行号颜色: {LINENUMBERCOLOR.upper()}")
+
+    def change_foreground_linenumber_color(self):
+        global LINENUMBERFOREGROUNDCOLOR
+        MSG_WIDGET = QWidget()
+        MSG_WIDGET.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
+        color: QColor = QColorDialog.getColor(QColor(LINENUMBERFOREGROUNDCOLOR), MSG_WIDGET, "python记事本 - 颜色")
+        LINENUMBERFOREGROUNDCOLOR = color.name()
+        self._foreground_linenumber_color.setStyleSheet(f"color: {LINENUMBERFOREGROUNDCOLOR};")
+        self._foreground_linenumber_color.setText(f"行号景色: {LINENUMBERFOREGROUNDCOLOR.upper()}")
+
+    def change_text_color(self):
+        global TEXTCOLOR
+        msg_widget = QWidget()
+        msg_widget.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
+        color: QColor = QColorDialog.getColor(QColor(TEXTCOLOR), msg_widget, "python记事本 - 颜色")
+        TEXTCOLOR = color.name()
+        self.text_color.setStyleSheet(f"color: {TEXTCOLOR};")
+        self._text_color.setText(f"文本框颜色: {TEXTCOLOR.upper()}")
+        for i in self.parents.text:
+            i.setStyleSheet(
+                f"selection-background-color: {SELECTIONCOLOR};selection-color: {SELECTIONFOREGROUNDCOLOR};"
+                f"color: {TEXTFOREGROUNDCOLOR};background-color: {TEXTCOLOR}")
+
+    def change_foreground_text_color(self):
+        global TEXTFOREGROUNDCOLOR
+        MSG_WIDGET = QWidget()
+        MSG_WIDGET.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
+        color: QColor = QColorDialog.getColor(QColor(TEXTFOREGROUNDCOLOR), MSG_WIDGET, "python记事本 - 颜色")
+        TEXTFOREGROUNDCOLOR = color.name()
+        self.foreground_text_color.setStyleSheet(f"color: {TEXTFOREGROUNDCOLOR};")
+        self._foreground_text_color.setText(f"文本框前景色: {TEXTFOREGROUNDCOLOR.upper()}")
+        for i in self.parents.text:
+            i.setStyleSheet(
+                f"selection-background-color: {SELECTIONCOLOR};selection-color: {SELECTIONFOREGROUNDCOLOR};"
+                f"color: {TEXTFOREGROUNDCOLOR};background-color: {TEXTCOLOR}")
 
     def change_line_color(self):
         global LINECOLOR
         msg_widget = QWidget()
         msg_widget.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
-        color: QColor = QColorDialog.getColor(QColor(LINECOLOR), msg_widget, "python记事本 - 行高亮颜色")
+        color: QColor = QColorDialog.getColor(QColor(LINECOLOR), msg_widget, "python记事本 - 颜色")
         LINECOLOR = color.name()
         self.line_color.setStyleSheet(f"color: {LINECOLOR};")
         self._line_color.setText(f"行高亮颜色: {LINECOLOR.upper()}")
@@ -333,7 +427,7 @@ class Setting(Window):
         global FOREGROUNDLINECOLOR
         MSG_WIDGET = QWidget()
         MSG_WIDGET.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
-        color: QColor = QColorDialog.getColor(QColor(FOREGROUNDLINECOLOR), MSG_WIDGET, "python记事本 - 行高亮颜色")
+        color: QColor = QColorDialog.getColor(QColor(FOREGROUNDLINECOLOR), MSG_WIDGET, "python记事本 - 颜色")
         FOREGROUNDLINECOLOR = color.name()
         self.foreground_line_color.setStyleSheet(f"color: {FOREGROUNDLINECOLOR};")
         self._foreground_line_color.setText(f"行高亮前景色: {FOREGROUNDLINECOLOR.upper()}")
@@ -342,25 +436,27 @@ class Setting(Window):
         global SELECTIONCOLOR
         MSG_WIDGET = QWidget()
         MSG_WIDGET.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
-        color: QColor = QColorDialog.getColor(QColor(SELECTIONCOLOR), MSG_WIDGET, "python记事本 - 行高亮颜色")
+        color: QColor = QColorDialog.getColor(QColor(SELECTIONCOLOR), MSG_WIDGET, "python记事本 - 颜色")
         SELECTIONCOLOR = color.name()
         self.selection_line_color.setStyleSheet(f"color: {SELECTIONCOLOR};")
-        self._selection_line_color.setText(f"行选择颜色: {SELECTIONCOLOR.upper()}")
+        self._selection_line_color.setText(f"被选择颜色: {SELECTIONCOLOR.upper()}")
         for i in self.parents.text:
             i.setStyleSheet(
-                f"selection-background-color: {SELECTIONCOLOR};selection-color: {SELECTIONFOREGROUNDCOLOR};")
+                f"selection-background-color: {SELECTIONCOLOR};selection-color: {SELECTIONFOREGROUNDCOLOR};"
+                f"color: {TEXTFOREGROUNDCOLOR};background-color: {TEXTCOLOR}")
 
     def change_foreground_selection_line_color(self):
         global SELECTIONFOREGROUNDCOLOR
         MSG_WIDGET = QWidget()
         MSG_WIDGET.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
-        color: QColor = QColorDialog.getColor(QColor(SELECTIONFOREGROUNDCOLOR), MSG_WIDGET, "python记事本 - 行高亮颜色")
+        color: QColor = QColorDialog.getColor(QColor(SELECTIONFOREGROUNDCOLOR), MSG_WIDGET, "python记事本 - 颜色")
         SELECTIONFOREGROUNDCOLOR = color.name()
         self.foreground_selection_line_color.setStyleSheet(f"color: {SELECTIONFOREGROUNDCOLOR};")
-        self._foreground_selection_line_color.setText(f"行选择前景色: {SELECTIONFOREGROUNDCOLOR.upper()}")
+        self._foreground_selection_line_color.setText(f"被选择前景色: {SELECTIONFOREGROUNDCOLOR.upper()}")
         for i in self.parents.text:
             i.setStyleSheet(
-                f"selection-background-color: {SELECTIONCOLOR};selection-color: {SELECTIONFOREGROUNDCOLOR};")
+                f"selection-background-color: {SELECTIONCOLOR};selection-color: {SELECTIONFOREGROUNDCOLOR};"
+                f"color: {TEXTFOREGROUNDCOLOR};background-color: {TEXTCOLOR}")
 
     def change_font(self):
         MSG_WIDGET = QWidget()
