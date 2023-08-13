@@ -1,3 +1,7 @@
+import datetime
+
+import pyperclip
+
 from widgets import *
 import sys
 import os
@@ -65,9 +69,9 @@ class MainWindow(QMainWindow):
         get = get_path()
         self.paths = [get]
         # threading.Thread(target=self.add_menu).start()
-        self.add_menu()
         self.right = self.note.tabBar().RightSide
         self.start()
+        self.add_menu()
         self.note.tabBar().setMovable(True)
         self.show()
 
@@ -83,12 +87,17 @@ class MainWindow(QMainWindow):
         file.addSeparator()
         add_command(file, label="退出", shortcut="Alt+F4", command=QApplication.instance().quit)
         edit = add_cascade(self.menu, "编辑(E)")
+        add_command(edit, label="插入当前时间",
+                    command=lambda: self.text[self.note.currentIndex()].text.textCursor().insertText(
+                        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+        add_command(edit, label="复制",
+                    command=lambda: pyperclip.copy(self.text[self.note.currentIndex()].text.textCursor().selectedText()))
         help_ = add_cascade(self.menu, "帮助(H)")
-        add_command(help_, label="设置", command=lambda :Setting(self))
+        add_command(help_, label="设置", command=lambda: Setting(self))
         add_command(help_, label="关于",
                     command=lambda: QMessageBox.information(QWidget(), "关于", """python记事本1.0.0
 Copyright(2023)"""))
-
+        
     def resizeEvent(self, *args, **kwargs):
         super().resizeEvent(*args, **kwargs)
         self.note.resize(self.width() - 150, self.height())
@@ -135,7 +144,7 @@ Copyright(2023)"""))
         text.text.setFont(FONT)
         self.note.addTab(text, os.path.basename(self.paths[-1]))
         self.text.append(text)
-        self.note.tabBar().setTabButton(self.note.count()-1,self.right,TabButtonWidget())
+        self.note.tabBar().setTabButton(self.note.count() - 1, self.right, TabButtonWidget())
         self.setWindowTitle(f"python记事本 - {os.path.basename(self.paths[self.note.currentIndex()])}")
 
     def _save(self):
@@ -174,7 +183,7 @@ Copyright(2023)"""))
         text.text.setFont(FONT)
         self.note.addTab(text, "无标题")
         self.text.append(text)
-        self.note.tabBar().setTabButton(self.note.count()-1,self.right,TabButtonWidget())
+        self.note.tabBar().setTabButton(self.note.count() - 1, self.right, TabButtonWidget())
         self.setWindowTitle("python记事本 - 无标题")
 
 

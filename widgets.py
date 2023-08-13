@@ -8,13 +8,17 @@ FONT = QFont()
 FONT.setFamily("Microsoft YaHei UI")
 FONT.setPointSize(12)
 
+
 class CursorChangeButton(QPushButton):
     def enterEvent(self, a0: QMoveEvent) -> None:
         self.setCursor(Qt.PointingHandCursor)
         super().enterEvent(a0)
+
     def leaveEvent(self, a0: QEvent) -> None:
         self.setCursor(Qt.ArrowCursor)
         super().leaveEvent(a0)
+
+
 class LineNumPaint(QWidget):
     def __init__(self, q_edit, parents=None):
         super().__init__(parents)
@@ -63,7 +67,7 @@ class PlainTextEditWithLineNum(QPlainTextEdit):
         self.lineNumberArea.update()
 
     def lineNumberAreaWidth(self):
-        block_count = self.document().blockCount()+100
+        block_count = self.document().blockCount() + 100
         max_value = max(1, block_count)
         d_count = len(str(max_value))
         _width = self.fontMetrics().width('9') * d_count + 5
@@ -121,7 +125,7 @@ class PlainTextEditWithLineNum(QPlainTextEdit):
             top = top + line_height
             blockNumber += 1
 
-
+QTextCursor().selectedText()
 class TextEdit(QFrame):
     def __init__(self, parents: QMainWindow):
         super().__init__(parents)
@@ -133,6 +137,7 @@ class TextEdit(QFrame):
         self.append = self.text.appendPlainText
         self.setText = self.text.setPlainText
         self.toText = self.text.toPlainText
+        self.textCursor = self.text.textCursor
         # stp = QScrollBar(self)
         # stp.resize(20, self.text.height() - 25)
         # stp.move(self.text.width() - 25, 0)
@@ -161,28 +166,32 @@ class TabButtonWidget(QWidget):
         self.layout.addWidget(self.button_add)
         # Use layout in widget
         self.setLayout(self.layout)
+
+
 class Setting(QScrollArea):
-    def __init__(self, parents:QMainWindow):
+    def __init__(self, parents: QMainWindow):
         super().__init__(parents)
         parents.setWindowTitle("python记事本 - 设置")
         self.parents = parents
         self.setFrameShape(QFrame.NoFrame)
-        self.resize(parents.width(),parents.height())
+        self.resize(parents.width(), parents.height())
         self.setStyleSheet("background-color:rgba(255, 255, 255, 1)")
-        exit_=CursorChangeButton("←",self)
-        font=QFont()
+        exit_ = CursorChangeButton("←", self)
+        font = QFont()
         font.setFamily("Microsoft YaHei UI")
         font.setPointSize(30)
         font.setBold(True)
         exit_.setFont(font)
-        exit_.resize(60,60)
-        exit_.move(20,20)
+        exit_.resize(60, 60)
+        exit_.move(20, 20)
         exit_.setStyleSheet("background-color:rgba(0, 0, 0, 0)")
         exit_.clicked.connect(self.exit)
-        lb=QLabel("python记事本 - 设置",self)
+        lb = QLabel("python记事本 - 设置", self)
         lb.setFont(font)
-        lb.move(100,5)
+        lb.move(100, 5)
         self.show()
+
     def exit(self):
-        self.parents.setWindowTitle(f"python记事本 - {os.path.basename(self.parents.paths[self.parents.note.currentIndex()])}")
+        self.parents.setWindowTitle(
+            f"python记事本 - {os.path.basename(self.parents.paths[self.parents.note.currentIndex()])}")
         self.hide()
