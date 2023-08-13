@@ -8,6 +8,13 @@ from PyQt5.QtGui import *
 FONT = QFont()
 FONT.setFamily("Microsoft YaHei UI")
 FONT.setPointSize(12)
+LINECOLOR = "#E5E5FF"
+FOREGROUNDLINECOLOR = "#000000"
+SELECTIONCOLOR = "#97C6EB"
+SELECTIONFOREGROUNDCOLOR = "#000000"
+STYLE_SHEET = ('background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0.03, y2:1, '
+              '''stop:0 rgba(253, 253, 253, 255), stop:1 rgba(238, 238, 238, 255));
+                 border:1px solid rgba(0, 0, 0, 0.1); border-radius:5px;''')
 
 
 class CursorChangeButton(QPushButton):
@@ -18,6 +25,7 @@ class CursorChangeButton(QPushButton):
     def leaveEvent(self, a0: QEvent) -> None:
         self.setCursor(Qt.ArrowCursor)
         super().leaveEvent(a0)
+
 
 class LineNumPaint(QWidget):
     def __init__(self, q_edit, parents=None):
@@ -86,8 +94,9 @@ class PlainTextEditWithLineNum(QPlainTextEdit):
         extraSelections = []
         if not self.isReadOnly():
             selection = QTextEdit.ExtraSelection()
-            lineColor = QColor(Qt.blue).lighter(190)
-            selection.format.setBackground(lineColor)
+            # lineColor = QColor(Qt.blue).lighter(190)
+            selection.format.setBackground(QColor(LINECOLOR))
+            selection.format.setForeground(QColor(FOREGROUNDLINECOLOR))
             selection.format.setProperty(QTextFormat.FullWidthSelection, True)
             selection.cursor = self.textCursor()
             selection.cursor.clearSelection()
@@ -98,7 +107,6 @@ class PlainTextEditWithLineNum(QPlainTextEdit):
         cursor = QTextCursor(self.document())
         painter = QPainter(self.lineNumberArea)
         painter.setFont(FONT)
-        painter.setBackground(QColor("rgb(255, 255, 255)"))
 
         # painter.fillRect(event.rect(), Qt.white)
         line_height = self.fontMetrics().lineSpacing()  # 包含行间距的行高
@@ -150,7 +158,7 @@ class TextEdit(QFrame):
 
 class TabButtonWidget(QWidget):
 
-    def __init__(self):
+    def __init__(self, parents=None, index=0):
         super(TabButtonWidget, self).__init__()
         # Create button's
         self.button_add = CursorChangeButton("  ×", self)
@@ -158,6 +166,7 @@ class TabButtonWidget(QWidget):
         self.button_add.setStyleSheet("background-color:rgba(0, 0, 0, 0)")
         # Set button size
         self.button_add.setFixedSize(30, 30)
+        self.button_add.clicked.connect(lambda: parents.close_tab(index))
         # Create layout
         self.layout = QVBoxLayout()
         self.layout.setSpacing(0)
@@ -168,7 +177,54 @@ class TabButtonWidget(QWidget):
         self.setLayout(self.layout)
 
 
-class Setting(QScrollArea):
+class Window(QScrollArea):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # 设置标签背景色
+        palette = QPalette()
+        palette.setColor(QPalette.Window, QColor(141, 91, 153))
+        # 设置透明度
+        self.opacity = QGraphicsOpacityEffect()  # 透明度对象
+        self.opacity.setOpacity(0)  # 初始化设置透明度为0，即完全透明
+        self.setGraphicsEffect(self.opacity)  # 把标签的透明度设置为为self.opacity
+
+        self.draw()  # 淡入效果开始
+
+    def draw(self):
+        self.opacity.i = 1  # 用于记录透明度变化与循环次数
+
+        def timeout():  # 超时函数：改变透明度
+            self.opacity.setOpacity(self.opacity.i / 100)
+            self.setGraphicsEffect(self.opacity)  # 改变标签透明度
+            self.opacity.i += 1
+            if self.opacity.i >= 100:  # 此时透明度为1，即不透明，控件已经完全显示出来了
+                self.timer.stop()  # 计时器停止
+                self.timer.deleteLater()
+
+        self.timer = QTimer()  # 计时器
+        self.timer.setInterval(7)  # 设置间隔时间，毫秒为单位
+        self.timer.timeout.connect(timeout)  # 超时槽函数，每到达间隔时间，调用该函数
+        self.timer.start()  # 计时器开始
+
+    def un_draw(self):
+        self.opacity.i = 100  # 用于记录透明度变化与循环次数
+
+        def timeout():  # 超时函数：改变透明度
+            self.opacity.setOpacity(self.opacity.i / 100)
+            self.setGraphicsEffect(self.opacity)  # 改变标签透明度
+            self.opacity.i -= 1
+            if self.opacity.i <= 0:  # 此时透明度为1，即不透明，控件已经完全显示出来了
+                self.timer.stop()  # 计时器停止
+                self.hide()
+                self.timer.deleteLater()
+
+        self.timer = QTimer()  # 计时器
+        self.timer.setInterval(7)  # 设置间隔时间，毫秒为单位
+        self.timer.timeout.connect(timeout)  # 超时槽函数，每到达间隔时间，调用该函数
+        self.timer.start()  # 计时器开始
+
+
+class Setting(Window):
     def __init__(self, parents: QMainWindow):
         super().__init__(parents)
         parents.setWindowTitle("python记事本 - 设置")
@@ -179,13 +235,19 @@ class Setting(QScrollArea):
         exit_ = CursorChangeButton("←", self)
         font = QFont()
         font.setFamily("Microsoft YaHei UI")
-        font.setPointSize(30)
         font.setBold(True)
+        font.setPointSize(12)
         exit_.setFont(font)
+        font.setPointSize(30)
         exit_.resize(60, 60)
-        exit_.move(20, 20)
+        exit_.move(0, 20)
         exit_.setStyleSheet("background-color:rgba(0, 0, 0, 0)")
         exit_.clicked.connect(self.exit)
+        icon = QLabel('', self)
+        icon.setPixmap(QPixmap(".\\icon\\notepad.ico"))
+        icon.move(50, 35)
+        icon.resize(40, 40)
+        icon.setScaledContents(True)
         lb = QLabel("python记事本 - 设置", self)
         lb.setFont(font)
         lb.move(100, 5)
@@ -194,16 +256,111 @@ class Setting(QScrollArea):
             f'下划线: {"有" if FONT.underline() else "无"} 删除线: {"有" if FONT.overline() else "无"}', self)
         self.ft.setFont(FONT)
         self.ft.move(100, 100)
-        self.ft.resize(1000,30)
+        self.ft.resize(1000, 30)
         change_font = CursorChangeButton("更改字体", self)
         change_font.setFont(FONT)
         change_font.move(950, 100)
         change_font.clicked.connect(self.change_font)
-        change_font.setStyleSheet('''
-background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0.03, y2:1, stop:0 rgba(253, 253, 253, 255), stop:1 rgba(238, 238, 238, 255));
-border:1px solid rgba(0, 0, 0, 0.1);
-border-radius:5px;''')
+        change_font.setStyleSheet(STYLE_SHEET)
+        self._line_color = QLabel(f"行高亮颜色: {LINECOLOR.upper()}", self)
+        # line_color.setStyleSheet(f"color: {LINECOLOR};")
+        self._line_color.move(100, 140)
+        self._line_color.setFont(FONT)
+        self._line_color.resize(280, 30)
+        self.line_color = QLabel("████████████████████████████", self)
+        self.line_color.move(380, 140)
+        self.line_color.setStyleSheet(f"color: {LINECOLOR};")
+        self.line_color.setFont(FONT)
+        change_line_color = CursorChangeButton("更改颜色", self)
+        change_line_color.setFont(FONT)
+        change_line_color.move(950, 140)
+        change_line_color.clicked.connect(self.change_line_color)
+        change_line_color.setStyleSheet(STYLE_SHEET)
+        self._foreground_line_color = QLabel(f"行高亮前景色: {FOREGROUNDLINECOLOR.upper()}", self)
+        # line_color.setStyleSheet(f"color: {LINECOLOR};")
+        self._foreground_line_color.move(100, 180)
+        self._foreground_line_color.setFont(FONT)
+        self._foreground_line_color.resize(280, 30)
+        self.foreground_line_color = QLabel("████████████████████████████", self)
+        self.foreground_line_color.move(380, 180)
+        self.foreground_line_color.setStyleSheet(f"color: {FOREGROUNDLINECOLOR};")
+        self.foreground_line_color.setFont(FONT)
+        change_foreground_line_color = CursorChangeButton("更改颜色", self)
+        change_foreground_line_color.setFont(FONT)
+        change_foreground_line_color.move(950, 180)
+        change_foreground_line_color.clicked.connect(self.change_foreground_line_color)
+        change_foreground_line_color.setStyleSheet(STYLE_SHEET)
+        self._foreground_selection_line_color = QLabel(f"行选择前景色: {SELECTIONFOREGROUNDCOLOR.upper()}", self)
+        # line_color.setStyleSheet(f"color: {LINECOLOR};")
+        self._foreground_selection_line_color.move(100, 260)
+        self._foreground_selection_line_color.setFont(FONT)
+        self._foreground_selection_line_color.resize(280, 30)
+        self.foreground_selection_line_color = QLabel("████████████████████████████", self)
+        self.foreground_selection_line_color.move(380, 260)
+        self.foreground_selection_line_color.setStyleSheet(f"color: {SELECTIONFOREGROUNDCOLOR};")
+        self.foreground_selection_line_color.setFont(FONT)
+        change_foreground_selection_line_color = CursorChangeButton("更改颜色", self)
+        change_foreground_selection_line_color.setFont(FONT)
+        change_foreground_selection_line_color.move(950, 260)
+        change_foreground_selection_line_color.clicked.connect(self.change_foreground_selection_line_color)
+        change_foreground_selection_line_color.setStyleSheet(STYLE_SHEET)
+        self._selection_line_color = QLabel(f"行选择颜色: {SELECTIONCOLOR.upper()}", self)
+        # line_color.setStyleSheet(f"color: {LINECOLOR};")
+        self._selection_line_color.move(100, 220)
+        self._selection_line_color.setFont(FONT)
+        self._selection_line_color.resize(240, 30)
+        self.selection_line_color = QLabel("████████████████████████████", self)
+        self.selection_line_color.move(380, 220)
+        self.selection_line_color.setStyleSheet(f"color: {SELECTIONCOLOR};")
+        self.selection_line_color.setFont(FONT)
+        change_selection_line_color = CursorChangeButton("更改颜色", self)
+        change_selection_line_color.setFont(FONT)
+        change_selection_line_color.move(950, 220)
+        change_selection_line_color.clicked.connect(self.change_selection_line_color)
+        change_selection_line_color.setStyleSheet(STYLE_SHEET)
         self.show()
+
+    def change_line_color(self):
+        global LINECOLOR
+        msg_widget = QWidget()
+        msg_widget.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
+        color: QColor = QColorDialog.getColor(QColor(LINECOLOR), msg_widget, "python记事本 - 行高亮颜色")
+        LINECOLOR = color.name()
+        self.line_color.setStyleSheet(f"color: {LINECOLOR};")
+        self._line_color.setText(f"行高亮颜色: {LINECOLOR.upper()}")
+
+    def change_foreground_line_color(self):
+        global FOREGROUNDLINECOLOR
+        MSG_WIDGET = QWidget()
+        MSG_WIDGET.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
+        color: QColor = QColorDialog.getColor(QColor(FOREGROUNDLINECOLOR), MSG_WIDGET, "python记事本 - 行高亮颜色")
+        FOREGROUNDLINECOLOR = color.name()
+        self.foreground_line_color.setStyleSheet(f"color: {FOREGROUNDLINECOLOR};")
+        self._foreground_line_color.setText(f"行高亮前景色: {FOREGROUNDLINECOLOR.upper()}")
+
+    def change_selection_line_color(self):
+        global SELECTIONCOLOR
+        MSG_WIDGET = QWidget()
+        MSG_WIDGET.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
+        color: QColor = QColorDialog.getColor(QColor(SELECTIONCOLOR), MSG_WIDGET, "python记事本 - 行高亮颜色")
+        SELECTIONCOLOR = color.name()
+        self.selection_line_color.setStyleSheet(f"color: {SELECTIONCOLOR};")
+        self._selection_line_color.setText(f"行选择颜色: {SELECTIONCOLOR.upper()}")
+        for i in self.parents.text:
+            i.setStyleSheet(
+                f"selection-background-color: {SELECTIONCOLOR};selection-color: {SELECTIONFOREGROUNDCOLOR};")
+
+    def change_foreground_selection_line_color(self):
+        global SELECTIONFOREGROUNDCOLOR
+        MSG_WIDGET = QWidget()
+        MSG_WIDGET.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
+        color: QColor = QColorDialog.getColor(QColor(SELECTIONFOREGROUNDCOLOR), MSG_WIDGET, "python记事本 - 行高亮颜色")
+        SELECTIONFOREGROUNDCOLOR = color.name()
+        self.foreground_selection_line_color.setStyleSheet(f"color: {SELECTIONFOREGROUNDCOLOR};")
+        self._foreground_selection_line_color.setText(f"行选择前景色: {SELECTIONFOREGROUNDCOLOR.upper()}")
+        for i in self.parents.text:
+            i.setStyleSheet(
+                f"selection-background-color: {SELECTIONCOLOR};selection-color: {SELECTIONFOREGROUNDCOLOR};")
 
     def change_font(self):
         MSG_WIDGET = QWidget()
@@ -213,8 +370,9 @@ border-radius:5px;''')
             global FONT
             FONT = font[0]
             # self.ft.setFont(FONT)
-            self.ft.setText(f'字体: {FONT.family()}   大小: {FONT.pointSize()}   重量: {"较重" if FONT.bold() else "正常"} '
-            f'下划线: {"有" if FONT.underline() else "无"} 删除线: {"有" if FONT.overline() else "无"}')
+            self.ft.setText(
+                f'字体: {FONT.family()}   大小: {FONT.pointSize()}   重量: {"较重" if FONT.bold() else "正常"} '
+                f'下划线: {"有" if FONT.underline() else "无"} 删除线: {"有" if FONT.overline() else "无"}')
             for i in self.parents.text:
                 i.setFont(FONT)
                 i.text.setFont(FONT)
@@ -222,4 +380,5 @@ border-radius:5px;''')
     def exit(self):
         self.parents.setWindowTitle(
             f"python记事本 - {os.path.basename(self.parents.paths[self.parents.note.currentIndex()])}")
-        self.hide()
+        self.un_draw()
+        # self.hide()

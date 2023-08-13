@@ -73,7 +73,10 @@ class MainWindow(QMainWindow):
         self.paths = [get]
         # threading.Thread(target=self.add_menu).start()
         self.right = self.note.tabBar().RightSide
-        self.start()
+        if self.paths[0] == '':
+            self.new()
+        else:
+            self.start()
         self.add_menu()
         self.note.tabBar().setMovable(True)
         self.settings = CursorChangeButton('', self)
@@ -103,6 +106,8 @@ class MainWindow(QMainWindow):
         add_command(file, label="全部保存", command=self._save_all)
         add_command(file, label="另存为", shortcut="Ctrl+Shift+S", command=self._save_as)
         file.addSeparator()
+        add_command(file, label="关闭选项卡", shortcut="Ctrl+W",
+                    command=lambda: self.close_tab(self.note.currentIndex()))
         add_command(file, label="退出", shortcut="Alt+F4", command=QApplication.instance().quit)
         edit = add_cascade(self.menu, "编辑(E)")
         add_command(edit, label="插入当前时间",
@@ -189,7 +194,7 @@ Copyright(2023)"""))
         text.text.setFont(FONT)
         self.note.addTab(text, os.path.basename(self.paths[-1]))
         self.text.append(text)
-        self.note.tabBar().setTabButton(self.note.count() - 1, self.right, TabButtonWidget())
+        self.note.tabBar().setTabButton(self.note.count() - 1, self.right, TabButtonWidget(self, self.note.count() - 1))
         self.setWindowTitle(f"python记事本 - {os.path.basename(self.paths[self.note.currentIndex()])}")
 
     def _save(self):
@@ -228,8 +233,16 @@ Copyright(2023)"""))
         text.text.setFont(FONT)
         self.note.addTab(text, "无标题")
         self.text.append(text)
-        self.note.tabBar().setTabButton(self.note.count() - 1, self.right, TabButtonWidget())
+        self.note.tabBar().setTabButton(self.note.count() - 1, self.right, TabButtonWidget(self, self.note.count() - 1))
         self.setWindowTitle("python记事本 - 无标题")
+
+    def close_tab(self, index: int) -> None:
+        self.note.removeTab(index)
+        self.text[index].deleteLater()
+        del self.paths[index]
+        del self.text[index]
+        if self.note.count() <= 0:
+            self.new()
 
 
 if __name__ == '__main__':
