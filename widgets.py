@@ -1,4 +1,5 @@
 import os.path
+import time
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -17,7 +18,6 @@ class CursorChangeButton(QPushButton):
     def leaveEvent(self, a0: QEvent) -> None:
         self.setCursor(Qt.ArrowCursor)
         super().leaveEvent(a0)
-
 
 class LineNumPaint(QWidget):
     def __init__(self, q_edit, parents=None):
@@ -125,7 +125,7 @@ class PlainTextEditWithLineNum(QPlainTextEdit):
             top = top + line_height
             blockNumber += 1
 
-QTextCursor().selectedText()
+
 class TextEdit(QFrame):
     def __init__(self, parents: QMainWindow):
         super().__init__(parents)
@@ -189,7 +189,35 @@ class Setting(QScrollArea):
         lb = QLabel("python记事本 - 设置", self)
         lb.setFont(font)
         lb.move(100, 5)
+        self.ft = QLabel(
+            f'字体: {FONT.family()}   大小: {FONT.pointSize()}   重量: {"较重" if FONT.bold() else "正常"} '
+            f'下划线: {"有" if FONT.underline() else "无"} 删除线: {"有" if FONT.overline() else "无"}', self)
+        self.ft.setFont(FONT)
+        self.ft.move(100, 100)
+        self.ft.resize(1000,30)
+        change_font = CursorChangeButton("更改字体", self)
+        change_font.setFont(FONT)
+        change_font.move(950, 100)
+        change_font.clicked.connect(self.change_font)
+        change_font.setStyleSheet('''
+background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0.03, y2:1, stop:0 rgba(253, 253, 253, 255), stop:1 rgba(238, 238, 238, 255));
+border:1px solid rgba(0, 0, 0, 0.1);
+border-radius:5px;''')
         self.show()
+
+    def change_font(self):
+        MSG_WIDGET = QWidget()
+        MSG_WIDGET.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
+        font = QFontDialog.getFont(MSG_WIDGET)
+        if font[1]:
+            global FONT
+            FONT = font[0]
+            # self.ft.setFont(FONT)
+            self.ft.setText(f'字体: {FONT.family()}   大小: {FONT.pointSize()}   重量: {"较重" if FONT.bold() else "正常"} '
+            f'下划线: {"有" if FONT.underline() else "无"} 删除线: {"有" if FONT.overline() else "无"}')
+            for i in self.parents.text:
+                i.setFont(FONT)
+                i.text.setFont(FONT)
 
     def exit(self):
         self.parents.setWindowTitle(

@@ -16,6 +16,7 @@ QTabWidget{
     background-color:rgb(240, 240, 240);
     border-radius:40px;
 }
+
 /*QScrollBar{*/
 /*    border-radius:5px;*/
 /*}*/
