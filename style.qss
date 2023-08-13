@@ -1,0 +1,19 @@
+QMainWindow{
+    background-color:rgb(255, 255, 255);
+}
+QTabWidget{
+    background-color:rgb(255, 255, 255);
+}
+QPlainTextEdit{
+    selection-background-color:rgb(151, 198, 235);
+    selection-color:rgb(0, 0, 0);
+}
+QMenu{
+    background-color:rgb(255, 255, 255);
+    selection-color:rgb(0, 0, 0);
+    selection-background-color:rgb(240, 240, 240);
+/*    border-radius:40px;*/
+}
+/*QScrollBar{*/
+/*    border-radius:5px;*/
+/*}*/
