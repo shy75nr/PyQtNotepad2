@@ -2,6 +2,9 @@ from PyQt5.QtGui import QFont
 FONT = QFont()
 FONT.setFamily("Microsoft YaHei UI")
 FONT.setPointSize(12)
+FONT_ = QFont()
+FONT_.setFamily("Microsoft YaHei UI")
+FONT_.setPointSize(12)
 LINECOLOR = "#E5E5FF"
 FOREGROUNDLINECOLOR = "#000000"
 SELECTIONCOLOR = "#97C6EB"

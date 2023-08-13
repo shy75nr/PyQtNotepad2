@@ -140,16 +140,28 @@ class MainWindow(QMainWindow):
                 ("行去重", self.deduplication)):
             add_command(h, label=text, command=command)
         edit.addSeparator()
+        for text, command, shortcut in (
+                ("增加缩进", self.add_tab, "Ctrl+]"),
+                ("减少缩进", self.remove_tab, "Ctrl+[")
+        ):
+            add_command(edit, label=text, command=command, shortcut=shortcut)
+        edit.addSeparator()
         add_command(edit, label="复制",
                     command=lambda: pyperclip.copy(
-                        self.text[self.note.currentIndex()].text.textCursor().selectedText()))
+                        self.text[self.note.currentIndex()].text.textCursor().selectedText()), shortcut="Ctrl+C")
         add_command(edit, label="剪切",
-                    command=self.cut)
+                    command=self.cut, shortcut="Ctrl+X")
         add_command(edit, label="粘贴",
                     command=lambda:
-                    self.text[self.note.currentIndex()].text.textCursor().insertText(pyperclip.paste()))
+                    self.text[self.note.currentIndex()].text.textCursor().insertText(pyperclip.paste()),
+                    shortcut="Ctrl+V")
+        add_command(edit, label="撤销", command=lambda: self.text[self.note.currentIndex()].text.undo(),
+                    shortcut="Ctrl+Z")
+        add_command(edit, label="重做", command=lambda: self.text[self.note.currentIndex()].text.redo(),
+                    shortcut="Ctrl+Y")
         add_command(edit, label="删除",
-                    command=lambda: self.text[self.note.currentIndex()].text.textCursor().removeSelectedText())
+                    command=lambda: self.text[self.note.currentIndex()].text.textCursor().removeSelectedText(),
+                    shortcut='Delete')
         add_command(edit, label="清空", command=lambda: self.text[self.note.currentIndex()].text.clear())
         help_ = add_cascade(self.menu, "帮助(H)")
         add_command(help_, label="设置", command=lambda: Setting(self))
@@ -161,6 +173,21 @@ Copyright(2023)"""))
         row = self.text[self.note.currentIndex()].text.textCursor().blockNumber()
         get = self.text[self.note.currentIndex()].toText().split("\n")
         del get[row]
+        self._insert(get)
+
+    def add_tab(self) -> None:
+        row = self.text[self.note.currentIndex()].text.textCursor().blockNumber()
+        get = self.text[self.note.currentIndex()].toText().split("\n")
+        get[row] = "    " + get[row]
+        self._insert(get)
+
+    def remove_tab(self) -> None:
+        row = self.text[self.note.currentIndex()].text.textCursor().blockNumber()
+        get = self.text[self.note.currentIndex()].toText().split("\n")
+        if get[row][0:4] == "    ":
+            get[row] = get[row][4:]
+        elif get[row][0] == "\t":
+            get[row] = get[row][1:]
         self._insert(get)
 
     def search_web(self):

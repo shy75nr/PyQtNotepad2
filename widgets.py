@@ -156,7 +156,7 @@ class TabButtonWidget(QWidget):
         self.index = index
         # Create button's
         self.button_add = CursorChangeButton("  ×", self)
-        self.button_add.setFont(FONT)
+        self.button_add.setFont(FONT_)
         self.button_add.setStyleSheet("background-color:rgba(0, 0, 0, 0)")
         # Set button size
         self.button_add.setFixedSize(30, 30)
