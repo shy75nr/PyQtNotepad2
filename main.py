@@ -1,22 +1,13 @@
 # !/usr/bin/python3
 # coding: GBK
-import os
 import random
 import subprocess
-import threading
 import webbrowser
-
+# import re
 import jieba
-import pyperclip
 
 from widgets import *
 import datetime
-from pygments import highlight
-from pygments.lexers import PythonLexer
-from pygments.formatters import HtmlFormatter
-
-
-# from qt_material import apply_stylesheet
 
 
 def get_path():
@@ -37,9 +28,6 @@ def get_path():
             paths = ""
     else:
         paths = a
-    nams = os.path.basename(paths)
-    if nams == "" or nams is None:
-        nams = "无标题"
     return paths
 
 
@@ -48,7 +36,7 @@ def add_cascade(parents: QMenuBar, label: str = '', icon=None) -> QMenuBar:
 
 
 def add_command(parents: QMenuBar, label: str = '', command=lambda: None, icon: QIcon = QIcon(),
-                shortcut: str = '') -> QMenuBar:
+                shortcut: str = '') -> QAction:
     act = QAction(label, parents)
     act.setIcon(icon)
     act.setShortcut(shortcut)
@@ -61,8 +49,8 @@ def critical(title, message):
     messageBox = QMessageBox(QMessageBox.Icon.Critical, title, message)
     messageBox.setStyleSheet(WIDGET_STYLE_SHEET)
     messageBox.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
-    btn = CursorChangeButton("确定", None)
-    btn.resize(30, 60)
+    btn = OutlineButton("确定", messageBox)
+    btn.resize(80, 25)
     Qyes = messageBox.addButton(btn, QMessageBox.YesRole)
     # Qno = messageBox.addButton(self.tr("忽略"), QMessageBox.NoRole)
     messageBox.exec_()
@@ -72,8 +60,8 @@ def information(title, message):
     messageBox = QMessageBox(QMessageBox.Icon.Information, title, message)
     messageBox.setStyleSheet(WIDGET_STYLE_SHEET)
     messageBox.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
-    btn = CursorChangeButton("确定", None)
-    btn.resize(30, 60)
+    btn = OutlineButton("确定", messageBox)
+    btn.resize(80, 30)
     Qyes = messageBox.addButton(btn, QMessageBox.YesRole)
     # Qno = messageBox.addButton(self.tr("忽略"), QMessageBox.NoRole)
     messageBox.exec_()
@@ -89,8 +77,9 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.resize(1300, 700)
-        with open("style.qss") as fo:
+        self.p = 0
+        self.resize(1330, 700)
+        with open(".\\style\\style.qss") as fo:
             self.setStyleSheet(fo.read())
         self.setWindowIcon(QIcon(".//icon//notepad.ico"))
         # self.setWindowTitle("python记事本")
@@ -111,15 +100,23 @@ class MainWindow(QMainWindow):
         self.right = self.note.tabBar().RightSide
         self.add_menu()
         self.note.tabBar().setMovable(True)
-        self.settings = CursorChangeButton('', self)
-        self.settings.setStyleSheet("background-color:rgba(0, 0, 0, 0)")
-        self.settings.setIcon(QIcon(".\\icon\\settings.png"))
-        self.settings.move(1230, 0)
-        self.settings.clicked.connect(lambda: Setting(self))
+        # self.settings = CursorChangeButton('', self)
+        # self.settings.setStyleSheet("background-color:rgba(0, 0, 0, 0)")
+        # self.settings.setIcon(QIcon(".\\icon\\settings.png"))
+        # self.settings.move(1200, 0)
+        # self.settings.clicked.connect(lambda: Setting(self))
+        # self.settings.resize(26,27)
+        self.op = CursorChangeButton('>>', self)
+        self.op.setStyleSheet("background-color:rgba(0, 0, 0, 0)")
+        self.op.move(1230, 0)
+        self.op.setFont(QFont("Consolas", 12))
+        self.op.clicked.connect(self.showToolTip)
         self.file_area = QScrollArea(self)
         self.file_area.setFont(FONT_)
         self.file_area.setFrameShape(QFrame.NoFrame)
         self.file_area.move(0, 50)
+        self.tool = ToolTip(self)
+        self.tool.hide()
         if self.paths[0] == '':
             self.new()
         else:
@@ -167,6 +164,20 @@ class MainWindow(QMainWindow):
         self.show_status()
         self.show()
 
+    def showToolTip(self):
+        self.p = self.tool.width()
+        if self.op.text() == ">>":
+            self.tool.show()
+            # for i in self.text:
+            # i.resize(i.width() - self.tool.width()-10, i.height())
+            self.op.setText("<<")
+        else:
+            self.tool.hide()
+            self.resize(self.width(), self.height())
+            # for i in self.text:
+            # i.resize(i.width() + self.tool.width()+10, i.height())
+            self.op.setText(">>")
+
     def show_status(self):
         try:
             self.statusBar().showMessage(self.paths[self.note.currentIndex()])
@@ -174,23 +185,33 @@ class MainWindow(QMainWindow):
         except IndexError:
             pass
         if isinstance(self.text[self.note.currentIndex()], TextEdit):
-            for i in self.disabled: i.setDisabled(False)
+            for i in self.disabled:
+                i.setDisabled(False)
             # map(lambda i: i.setDisabled(False), self.disabled)
         else:
-            for i in self.disabled: i.setDisabled(True)
+            for i in self.disabled:
+                i.setDisabled(True)
             # map(lambda i: i.setDisabled(True), self.disabled)
 
-    def highlight(self, text):
-        lexer = PythonLexer()
-        formatter = HtmlFormatter(style='colorful')
-        html = highlight(text.toPlainText(), lexer, formatter)
-        css = formatter.get_style_defs('.highlight')
-        text.setHtml("<style>" + css + "</style>" + html)
+    def open_dir(self):
+        path = FILEDIALOG.getExistingDirectory()
+        if path != "":
+            self.dir.set_dir(path)
+        print(path)
+
+    # def highlight(self, text):
+    #     lexer = PythonLexer()
+    #     formatter = HtmlFormatter(style='colorful')
+    #     html = highlight(text.toPlainText(), lexer, formatter)
+    #     css = formatter.get_style_defs('.highlight')
+    #     text.setHtml("<style>" + css + "</style>" + html)
 
     def dragEnterEvent(self, e):
-        print(e.mimeData().text()[8:])
-        self.paths.append(e.mimeData().text()[8:])
-        self.start()
+        x = e.mimeData().text()[8:]
+        print(x)
+        if x not in self.paths:
+            self.paths.append(x)
+            self.start()
         # super().dragEnterEvent(e)
 
     def show_file(self):
@@ -210,8 +231,10 @@ class MainWindow(QMainWindow):
         if event.type() == event.StatusTip:
             if event.tip() == "":
                 event = QStatusTipEvent(self.paths[self.note.currentIndex()])  # 此处为要始终显示的内容
-        if hasattr(self, "file_num"):
+        try:
             self.file_num.setText(f"  共{len(self.text[self.note.currentIndex()].text.toPlainText())}个字符  ")
+        except (IndexError, AttributeError):
+            pass
         return super().event(event)
 
     def current_with_debug(self, w):
@@ -224,9 +247,9 @@ class MainWindow(QMainWindow):
         self.file_area.setFont(FONT_)
         self.file_area.setFrameShape(QFrame.NoFrame)
         self.file_area.move(0, 50)
-        self.file_area.resize(150, 300)
+        self.file_area.resize(150, 260)
         self.file_area.show()
-        commands = [w for w in range(self.note.count())]
+        commands = [w for w in range(len(self.paths))]
         x = 0
         for i in range(len(self.paths)):
             if os.path.isfile(self.paths[i]):
@@ -243,7 +266,7 @@ class MainWindow(QMainWindow):
     # noinspection
     def zoom(self, add: int):
         global FONT
-        if (add == 0):
+        if add == 0:
             FONT.setPointSize(12)
         else:
             size = FONT.pointSize() + add
@@ -252,6 +275,7 @@ class MainWindow(QMainWindow):
             FONT.setPointSize(size)
         for i in self.text:
             i.text.setFont(FONT)
+            i.text.update_number()
         self.zoomed.setText(f"  {int(FONT.pointSize() * 100 / 12)}%  ")
 
     def add_menu(self):
@@ -261,6 +285,7 @@ class MainWindow(QMainWindow):
         file.addSeparator()
         add_command(file, label="打开(O)", shortcut="Ctrl+O",
                     command=lambda: threading.Thread(target=self.open).start())
+        add_command(file, label="打开文件夹", command=self.open_dir)
         encoding = add_cascade(file, label="用...打开")
         encodings = ("ANSI", "ASCII", "GBK", "GB2312", "UTF-8", "UTF-16", "Latin-1")
         commands = [lambda: self.open_as(i) for i in encodings]
@@ -360,15 +385,31 @@ class MainWindow(QMainWindow):
                         shortcut="Ctrl+Y"),
             add_command(edit, label="全选(A)", command=lambda: self.text[self.note.currentIndex()].text.selectAll(),
                         shortcut="Ctrl+A"),
+            add_command(edit, label="翻译(T)", command=lambda: Translation(),
+                        shortcut="Ctrl+T"),
             add_command(edit, label="删除",
                         command=lambda: self.text[self.note.currentIndex()].text.textCursor().removeSelectedText(),
                         shortcut='Delete'),
             add_command(edit, label="清空", command=lambda: self.text[self.note.currentIndex()].text.clear())]
         help_ = add_cascade(self.menu, "帮助(H)")
+        add_command(help_, label="帮助", command=lambda: information("帮助", f"python快乐记事本\n\
+Ctrl+s保存,Ctrl+w退出\nCtrl+L文本长度\
+Ctrl+o打开\nCtrl+]增加缩进,Ctrl+[取消缩进\n\
+Ctrl+Alt+u增加行,Ctrl+Alt+p删除行\n\
+如遇打开时卡死,请运行\"清除记录.bat\""), shortcut="F1")
         add_command(help_, label="设置", command=lambda: Setting(self))
         add_command(help_, label="关于",
                     command=lambda: information("关于", """python记事本1.0.0
 Copyright(2023)"""))
+        add_command(help_, label="关于PyQt", command=ShowAbout)
+        add_command(help_, label="清除记录",
+                    command=lambda: os.system(r"del C:\Users\%USERNAME%\AppData\Local\Temp\python_notepad.tmp"))
+        add_command(help_, label="更新日志", command=lambda: ShowTextDialog("python快乐记事本 更新日志",
+                                                                            ABOUT).setDisabled(False))
+
+    def keyPressEvent(self, a0: QKeyEvent) -> None:
+        self.text[self.note.currentIndex()].text.update_number()
+        super().keyPressEvent(a0)
 
     def Find_UI(self):
         self.findDialog = QDialog(self)
@@ -584,7 +625,7 @@ Copyright(2023)"""))
         else:
             keyword = QInputDialog(MSG_WIDGET).getText(MSG_WIDGET, 'web上搜索', '请输入搜索的内容:')[0]
             if keyword != '':
-                webbrowser.open(f"https://cn.bing.com/search?q={keyword}")
+                webbrowser.open(WEB.replace("$KEYWORD$", ""))
 
     def cut(self):
         text = self.text[self.note.currentIndex()].text.textCursor()
@@ -593,12 +634,15 @@ Copyright(2023)"""))
 
     def resizeEvent(self, *args, **kwargs):
         super().resizeEvent(*args, **kwargs)
-        self.note.resize(self.width() - 150, self.height() - 50)
-        self.settings.move(self.width() - 70, 0)
-        self.add.move(self.width() - 80, 5)
-        self.file.move(self.width() - 60, 5)
+        w = self.width()
+        self.note.resize(w - 150 - self.p, self.height() - 50)
+        self.add.move(w - 80, 5)
+        self.file.move(w - 60, 5)
         self.file_area.resize(150, 300)
+        self.op.move(w - 70, 0)
         self.dir.resize(160, self.height() - 310)
+        self.tool.resize(37, self.height() - 55)
+        self.tool.move(w - 35, 30)
         for i in self.text:
             i: TextEdit
             # i.text.move(30,0)
@@ -608,6 +652,7 @@ Copyright(2023)"""))
                              self.note.height() - 45)
                 except AttributeError:
                     pass
+        QApplication.processEvents()
 
     def open(self):
         path = FILEDIALOG.getOpenFileNames(MSG_WIDGET)
@@ -615,7 +660,7 @@ Copyright(2023)"""))
         if path[-1] != "":
             for i in path[0]:
                 self.paths.append(i)
-                self.start()
+                threading.Thread(target=self.start).start()
             self.note.setCurrentIndex(self.note.count() - 1)
 
     def open_as(self, encoding):
@@ -697,13 +742,17 @@ Copyright(2023)"""))
                 text = TextEdit(self)
             # text.resize(self.note.width(), self.note.height())
             text.append(read)
+            with open('.\\style\\font.tmp', 'rt') as fo:
+                FONT_FAMILY, FONT_SIZE = FONT_TEXT.match(fo.read()).groups()
+            FONT.setPointSize(eval(FONT_SIZE))
+            FONT.setFamily(FONT_FAMILY)
             text.text.setFont(FONT)
+            print(FONT.pointSize())
             self.note.addTab(text, os.path.basename(self.paths[-1]))
             self.text.append(text)
             self.tab_button.append(TabButtonWidget(self, self.note.count() - 1))
             self.note.tabBar().setTabButton(self.note.count() - 1, self.right, self.tab_button[-1])
             self.setWindowTitle(f"python记事本 - {os.path.basename(self.paths[self.note.currentIndex()])}")
-            threading.Thread(target=lambda: self.note.setCurrentIndex(self.note.count() - 1)).start()
             if isinstance(self.text[-1], TextEdit):
                 self.text[-1].text.goToLine(1)
                 self.text[-1].resize(self.note.width() - int(self.text[-1].text.lineNumberArea.width() / 5) - 1,
@@ -715,6 +764,8 @@ Copyright(2023)"""))
             #     self.highlight(self.text[-1].text)
             # self.text[-1].text.setFont(FONT)
             self.text[-1].text.setToolTip(self.paths[-1])
+            QApplication.processEvents()
+            threading.Thread(target=lambda: self.note.setCurrentIndex(self.note.count() - 1)).start()
         else:
             del self.paths[-1]
         self.update_file()
@@ -756,33 +807,35 @@ Copyright(2023)"""))
         index = self.note.currentIndex()
         if isinstance(self.text[index], TextEdit):
             if os.path.isfile(self.paths[index]):
-                with open(self.paths[index], 'wt') as fo:
-                    fo.write(self.text[index].toText())
+                with open(self.paths[index], 'wb') as fo:
+                    fo.write(self.text[index].toText().encode())
             else:
                 path = FILEDIALOG.getSaveFileName(MSG_WIDGET)
                 if path[-1] != "":
                     with open(path[0], 'wt') as fo:
                         fo.write(self.text[index].toText())
+                    self.paths[self.note.currentIndex()] = path
+                    self.note.setTabText(self.note.currentIndex(), os.path.basename(path[0]))
 
     def _save_as(self):
         index = self.note.currentIndex()
         if isinstance(self.text[index], TextEdit):
             path = FILEDIALOG.getSaveFileName(MSG_WIDGET)
             if path[-1] != "":
-                with open(path[0], 'wt') as fo:
-                    fo.write(self.text[index].toText())
+                with open(path[0], 'wb') as fo:
+                    fo.write(self.text[index].toText().encode())
 
     def _save_all(self):
         for index in range(self.note.count()):
             if isinstance(self.text[index], TextEdit):
                 if os.path.isfile(self.paths[index]):
-                    with open(self.paths[index], 'wt') as fo:
-                        fo.write(self.text[index].toText())
+                    with open(self.paths[index], 'wb') as fo:
+                        fo.write(self.text[index].toText().encode())
                 else:
                     path = FILEDIALOG.getSaveFileName(MSG_WIDGET)
                     if path[-1] != "":
-                        with open(self.paths[index], 'wt') as fo:
-                            fo.write(self.text[index].toText())
+                        with open(self.paths[index], 'wb') as fo:
+                            fo.write(self.text[index].toText().encode())
 
     def lcut(self):
         a = jieba.lcut(self.text[self.note.currentIndex()].toText())
@@ -844,5 +897,7 @@ if __name__ == '__main__':
     FILEDIALOG.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
     FILEDIALOG.setWindowTitle("python记事本 - 打开")
     FILEDIALOG.setStyleSheet(STYLE_SHEET)
+    if ERROR_TEXT != '':
+        critical("错误", ERROR_TEXT)
     window = MainWindow()
     sys.exit(app.exec())

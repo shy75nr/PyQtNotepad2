@@ -1,0 +1,4 @@
+pyperclip~=1.8.2
+PyQt5~=5.15.9
+jieba~=0.42.1
+pygments~=2.14.0

@@ -1,187 +1,22 @@
-import os.path
+
+import os
 import sys
+import threading
 import time
 from datetime import datetime
 
+import pyperclip
 from PyQt5.QtCore import *
-from PyQt5.QtGui import *
+
 from PyQt5.QtMultimedia import *
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtWidgets import *
-from typing import overload
+
 from constants import *
+import translate
 
 
 # import qrc_resources
-
-
-class PythonHighlighter(QSyntaxHighlighter):
-    Rules = []
-    Formats = {}
-
-    def __init__(self, parent=None):
-        super(PythonHighlighter, self).__init__(parent)
-
-        self.initializeFormats()
-
-        KEYWORDS = ["and", "as", "assert", "break", "class",
-                    "continue", "def", "del", "elif", "else", "except",
-                    "exec", "finally", "for", "from", "global", "if",
-                    "import", "in", "is", "lambda", "not", "or", "pass",
-                    "raise", "return", "try", "while", "with",
-                    "yield", "False", "True", "None"]
-        BUILTINS = ["abs", "all", "any", "basestring", "bool", "print",
-                    "callable", "chr", "classmethod", "cmp", "compile",
-                    "complex", "delattr", "dict", "dir", "divmod",
-                    "enumerate", "eval", "execfile", "exit", "file",
-                    "filter", "float", "frozenset", "getattr", "globals",
-                    "hasattr", "hex", "id", "int", "isinstance",
-                    "issubclass", "iter", "len", "list", "locals", "map",
-                    "max", "min", "object", "oct", "open", "ord", "pow",
-                    "property", "range", "reduce", "repr", "reversed",
-                    "round", "set", "setattr", "slice", "sorted",
-                    "staticmethod", "str", "sum", "super", "tuple", "type",
-                    "vars", "zip"]
-        CONSTANTS = ['ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException', 'BlockingIOError',
-                     'BrokenPipeError', 'BufferError', 'BytesWarning', 'ChildProcessError', 'ConnectionAbortedError',
-                     'ConnectionError', 'ConnectionRefusedError', 'ConnectionResetError', 'DeprecationWarning',
-                     'EOFError', 'Ellipsis', 'EnvironmentError', 'Exception', 'FileExistsError', 'FileNotFoundError',
-                     'FloatingPointError', 'FutureWarning', 'GeneratorExit', 'IOError', 'ImportError', 'ImportWarning',
-                     'IndentationError', 'IndexError', 'InterruptedError', 'IsADirectoryError', 'KeyError',
-                     'KeyboardInterrupt', 'LookupError', 'MemoryError', 'ModuleNotFoundError', 'NameError',
-                     'NotADirectoryError', 'NotImplemented', 'NotImplementedError', 'OSError', 'OverflowError',
-                     'PendingDeprecationWarning', 'PermissionError', 'ProcessLookupError', 'RecursionError',
-                     'ReferenceError', 'ResourceWarning', 'RuntimeError', 'RuntimeWarning', 'StopAsyncIteration',
-                     'StopIteration', 'SyntaxError', 'SyntaxWarning', 'SystemError', 'SystemExit', 'TabError',
-                     'TimeoutError', 'TypeError', 'UnboundLocalError', 'UnicodeDecodeError', 'UnicodeEncodeError',
-                     'UnicodeError', 'UnicodeTranslateError', 'UnicodeWarning', 'UserWarning', 'ValueError', 'Warning',
-                     'ZeroDivisionError', '__IPYTHON__', '__build_class__', '__debug__', '__doc__', '__import__',
-                     '__loader__', '__name__', '__package__', '__spec__', ]
-        MAGIC = ['__abs__', '__add__', '__and__', '__bool__', '__ceil__', '__class__', '__delattr__', '__dir__',
-                 '__divmod__', '__doc__', '__eq__', '__float__', '__floor__', '__floordiv__', '__format__', '__ge__',
-                 '__getattribute__', '__getnewargs__', '__gt__', '__hash__', '__index__', '__init__',
-                 '__init_subclass__', '__int__', '__invert__', '__le__', '__lshift__', '__lt__', '__mod__', '__mul__',
-                 '__ne__', '__neg__', '__new__', '__or__', '__pos__', '__pow__', '__radd__', '__rand__', '__rdivmod__',
-                 '__reduce__', '__reduce_ex__', '__repr__', '__rfloordiv__', '__rlshift__', '__rmod__', '__rmul__',
-                 '__ror__', '__round__', '__rpow__', '__rrshift__', '__rshift__', '__rsub__', '__rtruediv__',
-                 '__rxor__', '__setattr__', '__sizeof__', '__str__', '__sub__', '__subclasshook__', '__truediv__',
-                 '__trunc__', '__xor__']
-        PythonHighlighter.Rules.append((QRegExp(
-            "|".join([r"\b%s\b" % magic for magic in MAGIC])), "magic"))
-        PythonHighlighter.Rules.append((QRegExp(
-            "|".join([r"\b%s\b" % keyword for keyword in KEYWORDS])),
-                                        "keyword"))
-        PythonHighlighter.Rules.append((QRegExp(
-            "|".join([r"\b%s\b" % builtin for builtin in BUILTINS])),
-                                        "builtin"))
-        PythonHighlighter.Rules.append((QRegExp(
-            "|".join([r"\b%s\b" % constant
-                      for constant in CONSTANTS])), "constant"))
-        PythonHighlighter.Rules.append((QRegExp(
-            r"\b[+-]?[0-9]+[lL]?\b"
-            r"|\b[+-]?0[xX][0-9A-Fa-f]+[lL]?\b"
-            r"|\b[+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\b"),
-                                        "number"))
-        PythonHighlighter.Rules.append((QRegExp(
-            r"\bPyQt4\b|\bQt?[A-Z][a-z]\w+\b"), "pyqt"))
-        PythonHighlighter.Rules.append((QRegExp(r"\b@\w+\b"),
-                                        "decorator"))
-        stringRe = QRegExp(r"""(?:'[^']*'|"[^"]*")""")
-        stringRe.setMinimal(True)
-        PythonHighlighter.Rules.append((stringRe, "string"))
-        self.stringRe = QRegExp(r"""(:?"["]".*"["]"|'''.*''')""")
-        self.stringRe.setMinimal(True)
-        PythonHighlighter.Rules.append((self.stringRe, "string"))
-        self.tripleSingleRe = QRegExp(r"""'''(?!")""")
-        self.tripleDoubleRe = QRegExp(r'''"""(?!')''')
-
-    @staticmethod
-    def initializeFormats():
-        baseFormat = QTextCharFormat()
-        baseFormat.setFontFamily("Jetbrains Mono")
-        baseFormat.setFontPointSize(12)
-        for name, color in (("normal", Qt.black),
-                            ("keyword", '#CB7631'), ("builtin", '#7E86BB'),
-                            ("constant", 'purple'),
-                            ("decorator", Qt.darkBlue), ("comment", Qt.gray),
-                            ("string", Qt.darkGreen), ("number", Qt.blue),
-                            ("error", Qt.red), ("pyqt", Qt.darkCyan), ("magic", "#AD03AD")):
-            format = QTextCharFormat(baseFormat)
-            format.setForeground(QColor(color))
-            format.setFontWeight(QFont.Bold)
-            if name == "comment":
-                format.setFontItalic(True)
-            PythonHighlighter.Formats[name] = format
-
-    def highlightBlock(self, text):
-        NORMAL, TRIPLESINGLE, TRIPLEDOUBLE, ERROR = range(4)
-
-        textLength = len(text)
-        prevState = self.previousBlockState()
-        self.setFormat(0, textLength,
-                       PythonHighlighter.Formats["normal"])
-
-        if text.startswith("Traceback") or text.startswith("Error: "):
-            self.setCurrentBlockState(ERROR)
-            self.setFormat(0, textLength,
-                           PythonHighlighter.Formats["error"])
-            return
-        if (prevState == ERROR and
-                not (text.startswith(sys.ps1) or text.startswith("#"))):
-            self.setCurrentBlockState(ERROR)
-            self.setFormat(0, textLength,
-                           PythonHighlighter.Formats["error"])
-            return
-
-        for regex, format in PythonHighlighter.Rules:
-            i = regex.indexIn(text)
-            while i >= 0:
-                length = regex.matchedLength()
-                self.setFormat(i, length,
-                               PythonHighlighter.Formats[format])
-                i = regex.indexIn(text, i + length)
-
-        # Slow but good quality highlighting for comments. For more
-        # speed, comment this out and add the following to __init__:
-        # PythonHighlighter.Rules.append((QRegExp(r"#.*"), "comment"))
-        if not text:
-            pass
-        elif text[0] == "#":
-            self.setFormat(0, len(text),
-                           PythonHighlighter.Formats["comment"])
-        else:
-            stack = []
-            for i, c in enumerate(text):
-                if c in ('"', "'"):
-                    if stack and stack[-1] == c:
-                        stack.pop()
-                    else:
-                        stack.append(c)
-                elif c == "#" and len(stack) == 0:
-                    self.setFormat(i, len(text),
-                                   PythonHighlighter.Formats["comment"])
-                    break
-
-        self.setCurrentBlockState(NORMAL)
-
-        if self.stringRe.indexIn(text) != -1:
-            return
-        # This is fooled by triple quotes inside single quoted strings
-        for i, state in ((self.tripleSingleRe.indexIn(text),
-                          TRIPLESINGLE),
-                         (self.tripleDoubleRe.indexIn(text),
-                          TRIPLEDOUBLE)):
-            if self.previousBlockState() == state:
-                if i == -1:
-                    i = text.length()
-                    self.setCurrentBlockState(state)
-                self.setFormat(0, i + 3,
-                               PythonHighlighter.Formats["string"])
-            elif i > -1:
-                self.setCurrentBlockState(state)
-                self.setFormat(i, text.length(),
-                               PythonHighlighter.Formats["string"])
-
 
 class CursorChangeButton(QPushButton):
     def enterEvent(self, a0: QMoveEvent) -> None:
@@ -194,42 +29,17 @@ class CursorChangeButton(QPushButton):
 
 
 class OutlineButton(CursorChangeButton):
-    def setText(self, text: str) -> None:
-        self.setStyleSheet("""border-radius:3px;
-    border:1px solid rgb(50, 93, 136);
-    font-family:Microsoft YaHei UI;
-    background-color:rgb(255, 255, 255);
-    color:rgb(0, 0, 0);""")
-        super().setText(text)
-
-    # def setStyleSheet(self, styleSheet: str) -> None:
-    #     self.setStyleSheet("""border-radius:3px;
-    # border:1px solid rgb(50, 93, 136);
-    # font-family:Microsoft YaHei UI;
-    # background-color:rgb(255, 255, 255);
-    # color:rgb(0, 0, 0);""")
     def moveEvent(self, a0: QMoveEvent) -> None:
         super().moveEvent(a0)
-        self.setStyleSheet("""border-radius:3px;
-    border:1px solid rgb(50, 93, 136);
-    font-family:Microsoft YaHei UI;
-    background-color:rgb(255, 255, 255);
-    color:rgb(0, 0, 0);""")
+        self.setStyleSheet(OUTLINE.format("255, 255, 255", "0, 0, 0"))
+
     def enterEvent(self, a0: QMoveEvent) -> None:
         super().enterEvent(a0)
-        self.setStyleSheet("""border-radius:3px;
-    border:1px solid rgb(50, 93, 136);
-    font-family:Microsoft YaHei UI;
-    background-color:rgb(50, 93, 136);
-    color:rgb(255, 255, 255);""")
+        self.setStyleSheet(OUTLINE.format("50, 93, 136", "255, 255, 255"))
 
     def leaveEvent(self, a0: QEvent) -> None:
         super().leaveEvent(a0)
-        self.setStyleSheet("""border-radius:3px;
-    border:1px solid rgb(50, 93, 136);
-    font-family:Microsoft YaHei UI;
-    background-color:rgb(255, 255, 255);
-    color:rgb(0, 0, 0);""")
+        self.setStyleSheet(OUTLINE.format("255, 255, 255", "0, 0, 0"))
 
 
 class LineNumPaint(QWidget):
@@ -258,7 +68,11 @@ class PlainTextEditWithLineNum(QTextEdit):
 
     def mouseMoveEvent(self, e):
         super().mouseMoveEvent(e)
-        self.parents.parents.file_num.setText(f"  共{len(self.toPlainText())}个字符  ")
+        # if hasattr(self.parents, "parents"):
+        try:
+            self.parents.parents.file_num.setText(f"  共{len(self.toPlainText())}个字符  ")
+        except AttributeError:
+            pass
 
     def goToLine(self, line):
         if isinstance(line, tuple):
@@ -288,23 +102,33 @@ class PlainTextEditWithLineNum(QTextEdit):
         self.lineNumberArea.update()
         self.highlightCurrentLine()
         tc = self.textCursor()
-        self.parents.parents.row_column.setText(f"  第{tc.blockNumber() + 1}行,第{tc.columnNumber() + 1}列  ")
+        try:
+            self.parents.parents.row_column.setText(f"  第{tc.blockNumber() + 1}行,第{tc.columnNumber() + 1}列  ")
+        except AttributeError:
+            pass
+
+    def update_number(self):
+        self.update()
+        self.highlightCurrentLine()
+        self.lineNumberArea.update()
 
     def mousePressEvent(self, e: 'QMouseEvent') -> None:
         super().mousePressEvent(e)
-        self.update()
-        self.highlightCurrentLine()
-        self.lineNumberArea.update()
+        self.update_number()
         tc = self.textCursor()
-        self.parents.parents.row_column.setText(f"  第{tc.blockNumber() + 1}行,第{tc.columnNumber() + 1}列  ")
+        try:
+            self.parents.parents.row_column.setText(f"  第{tc.blockNumber() + 1}行,第{tc.columnNumber() + 1}列  ")
+        except AttributeError:
+            pass
 
     def mouseReleaseEvent(self, e: 'QMouseEvent') -> None:
         super().mouseReleaseEvent(e)
-        self.update()
-        self.highlightCurrentLine()
-        self.lineNumberArea.update()
+        self.update_number()
         tc = self.textCursor()
-        self.parents.parents.row_column.setText(f"  第{tc.blockNumber() + 1}行,第{tc.columnNumber() + 1}列  ")
+        try:
+            self.parents.parents.row_column.setText(f"  第{tc.blockNumber() + 1}行,第{tc.columnNumber() + 1}列  ")
+        except AttributeError:
+            pass
 
     def lineNumberAreaWidth(self):
         block_count = self.document().blockCount() + 100
@@ -355,7 +179,9 @@ class PlainTextEditWithLineNum(QTextEdit):
         height = self.fontMetrics().height()
         block = first_visible_block
         # while block.isValid() and (top <= event.rect().bottom()) and blockNumber <= last_block_number:
-        for x in range(50):
+        rg = self.toPlainText().count("\n") + 1
+        rg = rg if rg < 50 else 50
+        for x in range(rg):
             # cur_line_count = block.lineCount()
             if block.isVisible():
                 number = str(blockNumber + 1)
@@ -376,6 +202,11 @@ class TextEdit(QFrame):
         self.text.resize(self.parents.width() - 150, self.parents.height() - 70)
         self.text.move(int(self.text.lineNumberArea.width() / 5), 0)
         self.text.setFrameShape(QFrame.NoFrame)
+        self.text.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.text.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        # act=QSlider()
+        # act.triggered.connect(self.text.update_number)
+        # self.text.verticalScrollBar().triggerAction(act)
         # self.setFrameShape(QFrame.Box)
         # self.set
         # self.setLineWidth(0)
@@ -477,7 +308,7 @@ class AudioPlayer(QFrame):
         self.lb.setFont(FONT_)
         self.lb.move(150, 60)
         self.volume.valueChanged[int].connect(lambda f: self.player.setVolume(f) or self.lb.setText(str(f)))
-        self.sp.sliderMoved[int].connect(lambda: self.player.setPosition(self.sp.value()) or self.flush())
+        self.sp.sliderMoved[int].connect(lambda: self.changePosition())
         self.volume.setValue(100)
         lb = QLabel("音量", self)
         lb.setFont(FONT_)
@@ -511,6 +342,29 @@ class AudioPlayer(QFrame):
         self.text.goToLine = lambda f=0: None
         self.show()
 
+    def changePosition(self):
+        self.pause()
+        self.player.setPosition(self.sp.value())
+        self.flush()
+        self.starts()
+
+    def starts(self):
+        self.playing = True
+        self.player.play()
+
+    def pause(self):
+        self.playing = False
+        self.player.pause()
+
+    def flush(self):
+        if self.playing:
+            self.sp.setValue(self.sp.value() + 1000)
+            if self.sp.value() >= self.sp.maximum():
+                self.sp.setValue(0)
+        self.start.setText(time.strftime('%M:%S', time.localtime(self.player.position() / 1000)))
+        self.end.setText(time.strftime('%M:%S', time.localtime(self.player.duration() / 1000)))
+        self.sp.setMaximum(self.player.duration())
+
 
 class MediaPlayer(QFrame):
     def __init__(self, parents, path):
@@ -539,7 +393,9 @@ class MediaPlayer(QFrame):
         self.starts()
         self.pause()
         self.volume.valueChanged[int].connect(lambda f: self.player.setVolume(f) or self.lb.setText(str(f)))
-        self.sp.sliderMoved[int].connect(lambda: self.player.setPosition(self.sp.value()) or self.flush())
+        self.sp.sliderMoved[int].connect(lambda: self.changePosition())
+        self.player.setPosition(self.sp.value())
+        self.flush()
         self.volume.setValue(100)
         self.lb2 = QLabel("音量", self)
         self.lb2.setFont(FONT_)
@@ -569,6 +425,12 @@ class MediaPlayer(QFrame):
         self.text.goToEnd = lambda f=0: None
         self.text.goToLine = lambda f=0: None
         self.show()
+
+    def changePosition(self):
+        self.pause()
+        self.player.setPosition(self.sp.value())
+        self.flush()
+        self.starts()
 
     def resizeEvent(self, a0: QResizeEvent) -> None:
         self.sp.resize(self.parents.width() - 260, 20)
@@ -623,7 +485,319 @@ class TabButtonWidget(QWidget):
         self.setLayout(self.layout)
 
 
-class Window(QScrollArea):
+class FileStatistic(QDialog):
+    def __init__(self, paths):
+        super().__init__()
+        self.resize(980, 70 + len(paths) * 30)
+        self.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
+        self.setWindowTitle("python记事本 - 文件统计")
+        self.table = QTableWidget(len(paths) + 1, 8, self)
+        self.table.resize(self.width(), self.height())
+        self.setStyleSheet(WIDGET_STYLE_SHEET)
+        self.set(paths)
+        self.exec()
+
+    def set(self, paths):
+        for i in range(5, 8):
+            self.table.setColumnWidth(i, 140)
+        self.table.setItem(0, 0, QTableWidgetItem(QIcon(""), "文件名", 0))
+        self.table.setItem(0, 1, QTableWidgetItem(QIcon(""), "文件类型", 0))
+        self.table.setItem(0, 2, QTableWidgetItem(QIcon(""), "文件大小", 0))
+        self.table.setItem(0, 3, QTableWidgetItem(QIcon(""), "文件行数", 0))
+        self.table.setItem(0, 4, QTableWidgetItem(QIcon(""), "文件长度", 0))
+        self.table.setItem(0, 5, QTableWidgetItem(QIcon(""), "创建日期", 0))
+        self.table.setItem(0, 6, QTableWidgetItem(QIcon(""), "访问日期", 0))
+        self.table.setItem(0, 7, QTableWidgetItem(QIcon(""), "修改日期", 0))
+        for i in range(len(paths)):
+            print(paths[i], i + 1)
+            self.table.setItem(i + 1, 0, QTableWidgetItem(QIcon(".\\icon\\python.gif"), os.path.basename(paths[i]), 0))
+            self.table.setItem(i + 1, 1, QTableWidgetItem(QIcon(""), os.path.splitext(paths[i])[-1], 0))
+            self.table.setItem(i + 1, 2,
+                               QTableWidgetItem(QIcon(""), str(round(os.path.getsize(paths[i]) / 1024, 2)) + "KB", 0))
+            is_open = False
+            try:
+                with open(paths[i], 'rt', encoding="GBK") as fo:
+                    read = fo.read()
+                    is_open = True
+            except (UnicodeError, UnicodeDecodeError):
+                try:
+                    with open(paths[i], 'rt', encoding="UTF-8") as fo:
+                        read = fo.read()
+                        is_open = True
+                except(UnicodeError, UnicodeDecodeError):
+                    is_open = False
+            t = os.stat(paths[i])
+            if is_open:
+                self.table.setItem(i + 1, 3, QTableWidgetItem(QIcon(""), str(read.count("\n")), 0))
+                self.table.setItem(i + 1, 4, QTableWidgetItem(QIcon(""), str(len(read)), 0))
+            self.table.setItem(i + 1, 5, QTableWidgetItem(QIcon(""), str(datetime.fromtimestamp(t.st_ctime)), 0))
+            self.table.setItem(i + 1, 6, QTableWidgetItem(QIcon(""), str(datetime.fromtimestamp(t.st_atime)), 0))
+            self.table.setItem(i + 1, 7, QTableWidgetItem(QIcon(""), str(datetime.fromtimestamp(t.st_mtime)), 0))
+
+    def resizeEvent(self, a0: QResizeEvent) -> None:
+        super().resizeEvent(a0)
+        self.table.resize(self.width(), self.height())
+
+
+class ShowTextDialog(QDialog):
+    def __init__(self, title: str, string: str):
+        super().__init__()
+        self.setStyleSheet(WIDGET_STYLE_SHEET)
+        self.setFixedSize(500, 400)
+        self.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
+        self.setWindowTitle(title)
+        self.setStyleSheet(WIDGET_STYLE_SHEET)
+        self.text = PlainTextEditWithLineNum(self)
+        self.text.resize(500, 400)
+        self.text.setFont(FONT)
+        self.text.append(string)
+        self.text.move(int(self.text.lineNumberArea.width() / 5), 0)
+        self.text.setFrameShape(QFrame.NoFrame)
+        self.text.goToLine(1)
+        self.exec()
+
+    def setDisabled(self, a0: bool) -> None:
+        super().setDisabled(a0)
+        self.text.setDisabled(a0)
+
+
+class FileTreeWidget(QFrame):
+
+    def __init__(self, parents):
+        super().__init__(parents)
+        self.parents = parents
+        self.initUI()
+
+    def initUI(self):
+        # self.setGeometry(self.left, self.top, self.width, self.height)
+        self.model = QFileSystemModel()
+        self.model.setRootPath(QDir(os.path.dirname(self.parents.paths[0])).rootPath())
+        self.tree = QTreeView(self)
+        self.tree.setModel(self.model)
+        self.tree.setRootIndex(self.model.index(os.path.dirname(self.parents.paths[0])))
+        self.tree.setAnimated(False)
+        self.tree.setIndentation(10)
+        self.tree.setSortingEnabled(True)
+        self.tree.setFrameShape(QFrame.NoFrame)
+        font = FONT_
+        font.setPointSize(9)
+        self.tree.setFont(font)
+        font.setPointSize(12)
+        self.tree.resize(self.width(), self.height())
+        self.setFrameShape(QFrame.NoFrame)
+        # print(self.tree)
+        windowLayout = QVBoxLayout()
+        windowLayout.addWidget(self.tree)
+        self.tree.doubleClicked.connect(self.file_name)
+        self.setLayout(windowLayout)
+        self.show()
+
+    # def set_dir(self, dir):
+    #     self.model = QFileSystemModel()
+    #     self.model.setRootPath(QDir(dir).rootPath())
+    #     self.tree = QTreeView(self)
+    #     self.tree.setModel(self.model)
+    #     self.tree.setRootIndex(self.model.index(dir))
+    #     self.tree.setAnimated(False)
+    #     self.tree.setIndentation(10)
+    #     self.tree.setSortingEnabled(True)
+    #     self.tree.setFrameShape(QFrame.NoFrame)
+    #     font = FONT_
+    #     font.setPointSize(9)
+    #     self.tree.setFont(font)
+    #     font.setPointSize(12)
+    #     self.tree.resize(self.width(), self.height())
+    #     self.setFrameShape(QFrame.NoFrame)
+    #     # print(self.tree)
+    #     windowLayout = QVBoxLayout()
+    #     windowLayout.addWidget(self.tree)
+    #     self.tree.doubleClicked.connect(self.file_name)
+    #     self.setLayout(windowLayout)
+
+    def file_name(self, model_index: QModelIndex):
+        # print(self.model.filePath(model_index))  # 输出文件的地址。
+        # print(self.model.fileName(model_index))  # 输出文件名
+        file = self.model.filePath(model_index)
+        if os.path.isfile(file) and file not in self.parents.paths:
+            self.parents.paths.append(self.model.filePath(model_index))
+            self.parents.start()
+
+
+class ShowAbout(QDialog):
+    def __init__(self):
+        super().__init__()
+        string = """PyQt5 - Comprehensive Python Bindings for Qt v5
+===============================================
+https://pypi.org/project/PyQt5/
+===============================================
+Qt is set of cross-platform C++ libraries that implement high-level APIs for accessing many aspects of modern desktop
+and mobile systems.  These include location and positioning services, multimedia, NFC and Bluetooth connectivity, a
+Chromium based web browser, as well as traditional UI development.
+PyQt5 is a comprehensive set of Python bindings for Qt v5.  It is implemented as more than 35 extension modules and
+enables Python to be used as an alternative application development language to C++ on all supported platforms including
+iOS and Android.
+PyQt5 may also be embedded in C++ based applications to allow users of thoseapplications to configure or enhance the
+functionality of those applications.
+
+Author
+PyQt5 is copyright (c) Riverbank Computing Limited.  Its homepage is https://www.riverbankcomputing.com/software/pyqt/.
+Support may be obtained from the PyQt mailing list at https://www.riverbankcomputing.com/mailman/listinfo/pyqt/.
+
+License
+PyQt5 is released under the GPL v3 license and under a commercial license that allows for the development of proprietary
+applications.
+
+Documentation
+The documentation for the latest release can be found `here <https://www.riverbankcomputing.com/static/Docs/PyQt5/>`__.
+
+Installation
+The GPL version of PyQt5 can be installed from PyPI::
+    pip install PyQt5
+``pip`` will also build and install the bindings from the sdist package but Qt's ``qmake`` tool must be on ``PATH``.
+The ``sip-install`` tool will also install the bindings from the sdist package but will allow you to configure many
+aspects of the installation.
+"""
+        self.resize(880, 640)
+        self.setWindowTitle("关于PyQt")
+        self.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
+        self.setStyleSheet("background-color:white;")
+        lb = QLabel("About PyQt", self)
+        lb.move(100, 0)
+        ft = QFont("Microsoft YaHei UI", 13)
+        ft.setBold(True)
+        lb.setFont(ft)
+        lb2 = QLabel(string, self)
+        lb2.move(100, 30)
+        lb2.setFont(QFont("Microsoft YaHei UI", 10))
+        img = QLabel("", self)
+        img.setPixmap(QPixmap(".\\icon\\about.png"))
+        img.move(20, 20)
+        exit_ = OutlineButton("确定", self)
+        exit_.move(780, 605)
+        exit_.clicked.connect(self.close)
+        exit_.setFont(QFont("Microsoft YaHei UI", 10))
+        self.exec()
+
+
+class Translation(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.resize(660, 210)
+        self.setWindowIcon(QIcon(".//icon//notepad.ico"))
+        self.setWindowTitle("python记事本 - 翻译")
+        self.setStyleSheet("background-color:rgb(255, 255, 255);")
+        self.from_lang = 'Chinese'
+        self.to_lang = 'English'
+        self.lg = ("Chinese", "English")
+        self.translate = translate.Translator(from_lang=self.from_lang, to_lang=self.to_lang)
+        language = ("中文(简体)", "English")
+        l = QLabel("从", self)
+        l.setFont(FONT)
+        l = QLabel("翻译到", self)
+        l.setFont(FONT)
+        l.move(300, 0)
+        bx1 = QComboBox(self)
+        bx1.move(30, 0)
+        bx1.resize(200, 25)
+        style = """    border-radius:3px;
+    border:2px solid rgb(50, 93, 136);
+    font-family:Microsoft YaHei UI;
+    selection-background-color:rgb(151, 198, 235);
+    selection-color:rgb(0, 0, 0);"""
+        bx1.setStyleSheet(style)
+        bx1.setFont(FONT)
+        bx1.activated[int].connect(self.set_1)
+        for i in language:
+            bx1.addItem(i)
+        bx2 = QComboBox(self)
+        bx2.move(360, 0)
+        bx2.resize(200, 25)
+        bx2.setStyleSheet(style)
+        bx2.setFont(FONT)
+        bx2.activated[int].connect(self.set_2)
+        for i in language:
+            bx2.addItem(i)
+        bx2.setCurrentIndex(1)
+        btn = CursorChangeButton("", self)
+        btn.setIcon(QIcon(".\\icon\\translate.png"))
+        btn.setStyleSheet("""border-radius:20px;
+    border:1px solid rgb(140, 140, 140);
+    font-family:Microsoft YaHei UI;""")
+        btn.clicked.connect(self.run)
+        btn.resize(38, 38)
+        btn.move(295, 90)
+        self.text1 = QTextEdit(self)
+        self.text1.resize(275, 170)
+        self.text1.setFont(FONT)
+        self.text1.move(5, 40)
+        self.text2 = QTextEdit(self)
+        self.text2.resize(275, 170)
+        self.text2.setFont(FONT)
+        self.text2.move(345, 40)
+        self.exec()
+
+    def set_1(self, i):
+        self.from_lang = self.lg[i]
+        self.translate = translate.Translator(from_lang=self.from_lang, to_lang=self.to_lang)
+
+    def set_2(self, i):
+        self.to_lang = self.lg[i]
+        self.translate = translate.Translator(from_lang=self.from_lang, to_lang=self.to_lang)
+
+    def run(self):
+        self.text2.setText("● ● ●")
+        QApplication.processEvents()
+        try:
+            self.text2.setText(self.translate.translate(self.text1.toPlainText()))
+        except RuntimeError:
+            self.text2.setText("翻译失败")
+
+
+class ToolTip(QFrame):
+    def btn(self, icon, w, h, x, y, text=""):
+        b = CursorChangeButton("", self)
+        b.resize(w, h)
+        b.setIcon(QIcon(icon))
+        b.setIconSize(QSize(w, h))
+        b.move(x, y)
+        b.setStyleSheet("background-color:rgba(255,255,255,0);")
+        b.setToolTip(text)
+        return b
+
+    def __init__(self, parents):
+        super().__init__(parent=parents)
+        # self.resize(37, parents.height())
+        self.setStyleSheet("background-color:#FFFFFF;")
+        new = self.btn(".\\icon\\new-file.png", 36, 37, 0, 0, "新建")
+        new.clicked.connect(parents.new)
+        open = self.btn(".\\icon\\open.png", 32, 32, 2, 42, "打开")
+        open.clicked.connect(lambda: threading.Thread(target=parents.open).start())
+        save = self.btn(".\\icon\\save.png", 36, 37, 0, 80, "保存")
+        save.clicked.connect(parents._save)
+        copy = self.btn(".\\icon\\document-copy.png", 34, 34, 0, 120, "复制")
+        copy.clicked.connect(lambda: pyperclip.copy(
+            parents.text[parents.note.currentIndex()].text.textCursor().selectedText()))
+        cut = self.btn(".\\icon\\scissors.png", 36, 36, 0, 160, "剪切")
+        cut.clicked.connect(parents.cut)
+        paste = self.btn(".\\icon\\paste.png", 35, 35, 0, 200, "粘贴")
+        paste.clicked.connect(
+            lambda: parents.text[parents.note.currentIndex()].text.textCursor().insertText(pyperclip.paste()))
+        find = self.btn(".\\icon\\find.png", 36, 37, 0, 240, "查找")
+        find.clicked.connect(parents.Find_UI)
+        replace = self.btn(".\\icon\\replace-color.png", 36, 37, 0, 280, "替换")
+        replace.clicked.connect(parents.Replace_UI)
+        undo = self.btn(".\\icon\\undo.png", 36, 37, 0, 320, "撤销")
+        undo.clicked.connect(lambda: parents.text[parents.note.currentIndex()].text.undo())
+        redo = self.btn(".\\icon\\redo.png", 36, 37, 0, 360, "重做")
+        redo.clicked.connect(lambda: parents.text[parents.note.currentIndex()].text.redo())
+        help_ = self.btn(".\\icon\\help.ico", 36, 37, 0, 400, "关于")
+        help_.clicked.connect(lambda: ShowTextDialog("python快乐记事本 更新日志", ABOUT).setDisabled(False))
+        exit_ = self.btn(".\\icon\\exit.png", 32, 32, 0, 440, "退出")
+        exit_.clicked.connect(QApplication.instance().quit)
+        # new.move(0)
+
+
+class OpacityChangeWindow(QScrollArea):
     def __init__(self, parent=None):
         super().__init__(parent)
         # 设置标签背景色
@@ -670,14 +844,15 @@ class Window(QScrollArea):
         self.timer.start()  # 计时器开始
 
 
-class Setting(Window):
+class Setting(OpacityChangeWindow):
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, "_instance"):
             cls._instance = super().__new__(cls, *args, **kwargs)
         return cls._instance
 
-    def __init__(self, parents: QMainWindow):
+    def __init__(self, parents: QMainWindow, test=False):
         super().__init__(parents)
+        self.test = test
         parents.setWindowTitle("python记事本 - 设置")
         self.parents = parents
         self.setFrameShape(QFrame.NoFrame)
@@ -701,7 +876,7 @@ class Setting(Window):
         icon.setScaledContents(True)
         lb = QLabel("python记事本 - 设置", self)
         lb.setFont(font)
-        lb.move(100, 5)
+        lb.move(100, 20)
         self.ft = QLabel(
             f'字体: {FONT.family()}   大小: {FONT.pointSize()}   重量: {"较重" if FONT.bold() else "正常"} '
             f'下划线: {"有" if FONT.underline() else "无"} 删除线: {"有" if FONT.overline() else "无"}', self)
@@ -713,6 +888,7 @@ class Setting(Window):
         change_font.move(950, 100)
         change_font.clicked.connect(self.change_font)
         change_font.setStyleSheet(STYLE_SHEET)
+        change_font.resize(100, 25)
         self._line_color = QLabel(f"行高亮颜色: {LINECOLOR.upper()}", self)
         # line_color.setStyleSheet(f"color: {LINECOLOR};")
         self._line_color.move(100, 140)
@@ -727,6 +903,7 @@ class Setting(Window):
         change_line_color.move(950, 140)
         change_line_color.clicked.connect(self.change_line_color)
         change_line_color.setStyleSheet(STYLE_SHEET)
+        change_line_color.resize(100, 25)
         self._foreground_line_color = QLabel(f"行高亮前景色: {FOREGROUNDLINECOLOR.upper()}", self)
         # line_color.setStyleSheet(f"color: {LINECOLOR};")
         self._foreground_line_color.move(100, 180)
@@ -741,6 +918,7 @@ class Setting(Window):
         change_foreground_line_color.move(950, 180)
         change_foreground_line_color.clicked.connect(self.change_foreground_line_color)
         change_foreground_line_color.setStyleSheet(STYLE_SHEET)
+        change_foreground_line_color.resize(100, 25)
         self._foreground_selection_line_color = QLabel(f"被选择前景色: {SELECTIONFOREGROUNDCOLOR.upper()}", self)
         # line_color.setStyleSheet(f"color: {LINECOLOR};")
         self._foreground_selection_line_color.move(100, 260)
@@ -755,6 +933,7 @@ class Setting(Window):
         change_foreground_selection_line_color.move(950, 260)
         change_foreground_selection_line_color.clicked.connect(self.change_foreground_selection_line_color)
         change_foreground_selection_line_color.setStyleSheet(STYLE_SHEET)
+        change_foreground_selection_line_color.resize(100, 25)
         self._selection_line_color = QLabel(f"被选择颜色: {SELECTIONCOLOR.upper()}", self)
         # line_color.setStyleSheet(f"color: {LINECOLOR};")
         self._selection_line_color.move(100, 220)
@@ -769,6 +948,7 @@ class Setting(Window):
         change_selection_line_color.move(950, 220)
         change_selection_line_color.clicked.connect(self.change_selection_line_color)
         change_selection_line_color.setStyleSheet(STYLE_SHEET)
+        change_selection_line_color.resize(100, 25)
         self._linenumber_color = QLabel(f"行号颜色: {LINENUMBERCOLOR.upper()}", self)
         # line_color.setStyleSheet(f"color: {LINECOLOR};")
         self._linenumber_color.move(100, 300)
@@ -783,6 +963,7 @@ class Setting(Window):
         change_linenumber_color.move(950, 300)
         change_linenumber_color.clicked.connect(self.change_linenumber_color)
         change_linenumber_color.setStyleSheet(STYLE_SHEET)
+        change_linenumber_color.resize(100, 25)
         self._foreground_linenumber_color = QLabel(f"行号前景色: {LINENUMBERFOREGROUNDCOLOR.upper()}", self)
         # line_color.setStyleSheet(f"color: {LINECOLOR};")
         self._foreground_linenumber_color.move(100, 340)
@@ -797,6 +978,7 @@ class Setting(Window):
         change_foreground_linenumber_color.move(950, 340)
         change_foreground_linenumber_color.clicked.connect(self.change_foreground_linenumber_color)
         change_foreground_linenumber_color.setStyleSheet(STYLE_SHEET)
+        change_foreground_linenumber_color.resize(100, 25)
         self._text_color = QLabel(f"文本框颜色: {TEXTCOLOR.upper()}", self)
         # line_color.setStyleSheet(f"color: {LINECOLOR};")
         self._text_color.move(100, 380)
@@ -811,6 +993,7 @@ class Setting(Window):
         change_text_color.move(950, 380)
         change_text_color.clicked.connect(self.change_text_color)
         change_text_color.setStyleSheet(STYLE_SHEET)
+        change_text_color.resize(100, 25)
         self._foreground_text_color = QLabel(f"文本框前景色: {TEXTFOREGROUNDCOLOR.upper()}", self)
         # line_color.setStyleSheet(f"color: {LINECOLOR};")
         self._foreground_text_color.move(100, 420)
@@ -825,6 +1008,7 @@ class Setting(Window):
         change_foreground_text_color.move(950, 420)
         change_foreground_text_color.clicked.connect(self.change_foreground_text_color)
         change_foreground_text_color.setStyleSheet(STYLE_SHEET)
+        change_foreground_text_color.resize(100, 25)
         change_last_font_size_label = QLabel("缩放最小字体:", self)
         change_last_font_size_label.move(100, 460)
         change_last_font_size_label.setFont(FONT_)
@@ -859,8 +1043,51 @@ class Setting(Window):
         opacity_slider.valueChanged[int].connect(
             lambda f=0: opacity_num_label.setText(str(f)) or self.set_opacity(
                 1 - f / 100) or opacity_slider.setWindowOpacity(0))
-
+        web_label = QLabel("搜索引擎: ", self)
+        web_label.setFont(FONT_)
+        web_label.move(100, 540)
+        self.web_edit = QLineEdit(self)
+        self.web_edit.setFont(FONT_)
+        self.web_edit.resize(400, 25)
+        self.web_edit.move(180, 540)
+        self.web_edit.setText(WEB)
+        self.web_edit.setStyleSheet("""border-radius:3px;
+    border:2px solid rgb(50, 93, 136);
+    font-family:Microsoft YaHei UI;
+    selection-background-color:rgb(151, 198, 235);
+    selection-color:rgb(0, 0, 0);""")
+        self.web_edit.textChanged[str].connect(self.setWeb)
+        save = OutlineButton("保存", self)
+        save.clicked.connect(self.save)
+        save.setFont(FONT_)
+        save.move(1060, 100)
+        save.resize(100, 25)
+        save.setStyleSheet(STYLE_SHEET)
+        exits_ = OutlineButton("退出", self)
+        exits_.clicked.connect(self.exit)
+        exits_.setFont(FONT_)
+        exits_.move(1060, 140)
+        exits_.resize(100, 25)
+        exits_.setStyleSheet(STYLE_SHEET)
+        # change_linenumber_color = OutlineButton("更改颜色", self)
+        # change_linenumber_color.setFont(FONT_)
+        # change_linenumber_color.move(950, 300)
+        # change_linenumber_color.clicked.connect(self.change_linenumber_color)
+        # change_linenumber_color.setStyleSheet(STYLE_SHEET)
+        # change_linenumber_color.resize(100, 25)
         self.show()
+
+    def save(self):
+        x = {'linecolor': LINECOLOR, 'fglinecolor': FOREGROUNDLINECOLOR, 'selectioncolor': SELECTIONCOLOR,
+             'selectionfgcolor': SELECTIONFOREGROUNDCOLOR, "linenumcolor": LINENUMBERCOLOR,
+             'linenumfgcolor': LINENUMBERFOREGROUNDCOLOR, 'textcolor': TEXTCOLOR, 'textfgcolor': TEXTFOREGROUNDCOLOR,
+             'web': WEB, 'lastfontsize': LAST_FONT_SIZE, 'wrap': WRAP}
+        with open(".\\style\\settings.json", "wt") as fo:
+            fo.write(json.dumps(x))
+
+    def setWeb(self):
+        global WEB
+        WEB = self.web_edit.text()
 
     def set_opacity(self, f):
         self.parents.setWindowOpacity(f)
@@ -873,6 +1100,8 @@ class Setting(Window):
         for i in self.parents.text:
             # i: TextEdit
             i.text.setWordWrapMode(QTextOption.WrapAnywhere if self.wrap_or_not.isChecked() else QTextOption.NoWrap)
+            i.text.setHorizontalScrollBarPolicy(
+                Qt.ScrollBarAlwaysOn if self.wrap_or_not.isChecked() else Qt.ScrollBarAlwaysOff)
             WRAP = self.wrap_or_not.isChecked()
 
     def set_last_font_size(self, e=None):
@@ -1003,13 +1232,15 @@ class Setting(Window):
                 f"color: {TEXTFOREGROUNDCOLOR};background-color: {TEXTCOLOR}")
 
     def change_font(self):
+        global FONT, FONT_SIZE, FONT_FAMILY
         msg_widget = QWidget()
         msg_widget.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
         msg_widget.setStyleSheet(WIDGET_STYLE_SHEET)
         font = QFontDialog.getFont(msg_widget)
         if font[1]:
-            global FONT
             FONT = font[0]
+            FONT_SIZE = FONT.pointSize()
+            FONT_FAMILY = FONT.family()
             # self.ft.setFont(FONT_)
             self.ft.setText(
                 f'字体: {FONT.family()}   大小: {FONT.pointSize()}   重量: {"较重" if FONT.bold() else "正常"} '
@@ -1018,125 +1249,32 @@ class Setting(Window):
                 i.setFont(FONT)
                 i.text.setFont(FONT)
         self.parents.zoomed.setText(f"  {int(FONT.pointSize() * 100 / 12)}%  ")
+        with open('.\\style\\font.tmp', 'wt') as fo:
+            fo.write(f'font_family: {FONT_FAMILY}\nfont_size: {FONT_SIZE}')
 
     def exit(self):
-        self.parents.setWindowTitle(
-            f"python记事本 - {os.path.basename(self.parents.paths[self.parents.note.currentIndex()])}")
-        self.un_draw()
+        if not self.test:
+            self.parents.setWindowTitle(
+                f"python记事本 - {os.path.basename(self.parents.paths[self.parents.note.currentIndex()])}")
+            self.un_draw()
+        else:
+            self.un_draw()
+            sys.exit()
         # self.hide()
 
 
-class FileStatistic(QDialog):
-    def __init__(self, paths):
+class SetWindow(QMainWindow):
+
+    def __init__(self):
         super().__init__()
-        self.resize(980, 70 + len(paths) * 30)
+        self.resize(1330, 700)
+        self.setStyleSheet("background-color:white;")
+        self.text = self.paths = []
         self.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
-        self.setWindowTitle("python记事本 - 文件统计")
-        self.table = QTableWidget(len(paths) + 1, 8, self)
-        self.table.resize(self.width(), self.height())
-        self.setStyleSheet(WIDGET_STYLE_SHEET)
-        self.set(paths)
-        self.exec()
-
-    def set(self, paths):
-        for i in range(5, 8):
-            self.table.setColumnWidth(i, 140)
-        self.table.setItem(0, 0, QTableWidgetItem(QIcon(""), "文件名", 0))
-        self.table.setItem(0, 1, QTableWidgetItem(QIcon(""), "文件类型", 0))
-        self.table.setItem(0, 2, QTableWidgetItem(QIcon(""), "文件大小", 0))
-        self.table.setItem(0, 3, QTableWidgetItem(QIcon(""), "文件行数", 0))
-        self.table.setItem(0, 4, QTableWidgetItem(QIcon(""), "文件长度", 0))
-        self.table.setItem(0, 5, QTableWidgetItem(QIcon(""), "创建日期", 0))
-        self.table.setItem(0, 6, QTableWidgetItem(QIcon(""), "访问日期", 0))
-        self.table.setItem(0, 7, QTableWidgetItem(QIcon(""), "修改日期", 0))
-        for i in range(len(paths)):
-            print(paths[i], i + 1)
-            self.table.setItem(i + 1, 0, QTableWidgetItem(QIcon(".\\icon\\python.gif"), os.path.basename(paths[i]), 0))
-            self.table.setItem(i + 1, 1, QTableWidgetItem(QIcon(""), os.path.splitext(paths[i])[-1], 0))
-            self.table.setItem(i + 1, 2,
-                               QTableWidgetItem(QIcon(""), str(round(os.path.getsize(paths[i]) / 1024, 2)) + "KB", 0))
-            is_open = False
-            try:
-                with open(paths[i], 'rt', encoding="GBK") as fo:
-                    read = fo.read()
-                    is_open = True
-            except (UnicodeError, UnicodeDecodeError):
-                try:
-                    with open(paths[i], 'rt', encoding="UTF-8") as fo:
-                        read = fo.read()
-                        is_open = True
-                except(UnicodeError, UnicodeDecodeError):
-                    is_open = False
-            t = os.stat(paths[i])
-            if is_open:
-                self.table.setItem(i + 1, 3, QTableWidgetItem(QIcon(""), str(read.count("\n")), 0))
-                self.table.setItem(i + 1, 4, QTableWidgetItem(QIcon(""), str(len(read)), 0))
-            self.table.setItem(i + 1, 5, QTableWidgetItem(QIcon(""), str(datetime.fromtimestamp(t.st_ctime)), 0))
-            self.table.setItem(i + 1, 6, QTableWidgetItem(QIcon(""), str(datetime.fromtimestamp(t.st_atime)), 0))
-            self.table.setItem(i + 1, 7, QTableWidgetItem(QIcon(""), str(datetime.fromtimestamp(t.st_mtime)), 0))
-
-    def resizeEvent(self, a0: QResizeEvent) -> None:
-        super().resizeEvent(a0)
-        self.table.resize(self.width(), self.height())
-
-
-class ShowTextDialog(QDialog):
-    def __init__(self, title: str, string: str):
-        super().__init__()
-        self.setFixedSize(500, 400)
-        self.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
-        self.setWindowTitle(title)
-        self.setStyleSheet(WIDGET_STYLE_SHEET)
-        text = PlainTextEditWithLineNum(self)
-        text.resize(500, 400)
-        text.setFont(FONT)
-        text.appendPlainText(string)
-        text.move(int(text.lineNumberArea.width() / 5), 0)
-        text.setFrameShape(QFrame.NoFrame)
-        text.goToLine(1)
-        self.exec()
-
-
-class FileTreeWidget(QFrame):
-
-    def __init__(self, parents):
-        super().__init__(parents)
-        self.parents = parents
-        self.initUI()
-
-    def initUI(self):
-        # self.setGeometry(self.left, self.top, self.width, self.height)
-        self.model = QFileSystemModel()
-        self.model.setRootPath(QDir(os.path.dirname(self.parents.paths[0])).rootPath())
-        self.tree = QTreeView(self)
-        self.tree.setModel(self.model)
-        self.tree.setRootIndex(self.model.index(os.path.dirname(self.parents.paths[0])))
-        self.tree.setAnimated(False)
-        self.tree.setIndentation(10)
-        self.tree.setSortingEnabled(True)
-        self.tree.setFrameShape(QFrame.NoFrame)
-        font = FONT_
-        font.setPointSize(9)
-        self.tree.setFont(font)
-        font.setPointSize(12)
-        self.tree.resize(self.width(), self.height())
-        self.setFrameShape(QFrame.NoFrame)
-        # print(self.tree)
-        windowLayout = QVBoxLayout()
-        windowLayout.addWidget(self.tree)
-        self.tree.doubleClicked.connect(self.file_name)
-        self.setLayout(windowLayout)
         self.show()
-
-    def file_name(self, model_index: QModelIndex):
-        print(self.model.filePath(model_index))  # 输出文件的地址。
-        print(self.model.fileName(model_index))  # 输出文件名
-        if os.path.isfile(self.model.filePath(model_index)):
-            self.parents.paths.append(self.model.filePath(model_index))
-            self.parents.start()
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ex = MediaPlayer(None, "C:\\Users\\Administrator\\250.mp4")
+    ex = Setting(SetWindow(), test=True)
     sys.exit(app.exec_())
