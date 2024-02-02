@@ -1,0 +1,91 @@
+QMainWindow{
+    background-color:rgb(255, 255, 255);
+    border-image:url(.\\icon\\红岸工程.jpg);
+}
+QTreeView{
+  font-family: Microsoft YaHei UI;
+}
+QTreeView::title{
+  font-family: Microsoft YaHei UI;
+}
+QPlainTextEdit{
+    selection-background-color:rgb(151, 198, 235);
+    selection-color:rgb(0, 0, 0);
+    border-radius:10px;
+}
+QTextEdit{
+    selection-background-color:rgb(151, 198, 235);
+    selection-color:rgb(0, 0, 0);
+    border-radius:10px;
+    color:#6e6d69;
+}
+QMenu{
+    background-color:rgb(255, 255, 255);
+    selection-color:rgb(255, 255, 255);
+    selection-background-color:rgb(160, 160, 160);
+    border: 1px solid rgb(160, 160, 160);
+/*    border-radius:3px;*/
+}
+QScrollBar{
+    color:rgb(206,212,218);
+}
+QTabWidget{
+    selection-background-color:rgb(255, 255, 255);
+    background-color:rgb(240, 240, 240);
+    border-radius:40px;
+}
+QTableWidget{
+    border-radius:3px;
+    font-family: Microsoft YaHei UI;
+    border:2px solid rgb(50, 93, 136);
+    selection-background-color:rgb(151, 198, 235);
+    selection-color:rgb(0, 0, 0);
+}
+QScrollArea
+{
+    background-color:rgb(255, 255, 255);
+}
+QScrollBar:vertical {
+  border-width: 0px;
+  border: none;
+  background:rgba(64, 65, 79, 0);
+  width:12px;
+  margin: 0px 0px 0px 0px;
+}
+QScrollBar::handle:vertical {
+  background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+  stop: 0 #CED4DA, stop: 0.5 #CED4DA, stop:1 #CED4DA);
+  min-height: 20px;
+  max-height: 20px;
+  margin: 0 0px 0 0px;
+  border-radius: 6px;
+}
+QScrollBar::add-line:vertical {
+  background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+  stop: 0 rgba(64, 65, 79, 0), stop: 0.5 rgba(64, 65, 79, 0),  stop:1 rgba(64, 65, 79, 0));
+  height: 0px;
+  border: none;
+  subcontrol-position: bottom;
+  subcontrol-origin: margin;
+}
+QScrollBar::sub-line:vertical {
+  background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+  stop: 0  rgba(64, 65, 79, 0), stop: 0.5 rgba(64, 65, 79, 0),  stop:1 rgba(64, 65, 79, 0));
+  height: 0 px;
+  border: none;
+  subcontrol-position: top;
+  subcontrol-origin: margin;
+}
+QScrollBar::sub-page:vertical {
+background: rgba(64, 65, 79, 0);
+}
+
+QScrollBar::add-page:vertical {
+background: rgba(64, 65, 79, 0);
+}
+QCheckBox:!checked{
+
+}
+/*QScrollBar{*/
+/*    border-radius:5px;*/
+/*}*/

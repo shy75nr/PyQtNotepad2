@@ -1,0 +1,13 @@
+{
+  "linecolor": "#E5E5FF",
+  "fglinecolor": "#000000",
+  "selectioncolor": "#97C6EB",
+  "selectionfgcolor": "#000000",
+  "linenumcolor": "#FFFFFF",
+  "linenumfgcolor": "#4682B4",
+  "textcolor": "#FFFFFF",
+  "textfgcolor": "#212120",
+  "web": "https://cn.bing.com/search?q=$KEYWORD$",
+  "lastfontsize": 7,
+  "wrap": true
+}
