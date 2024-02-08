@@ -2,7 +2,6 @@ import json
 import re
 from PyQt5.QtGui import *
 import getpass
-
 USERNAME = getpass.getuser()
 FONT = QFont()
 FONT_TEXT = re.compile(r'''font_family: (.+)

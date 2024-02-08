@@ -1,4 +1,3 @@
-
 import os
 import sys
 import threading
@@ -486,9 +485,15 @@ class TabButtonWidget(QWidget):
 
 
 class FileStatistic(QDialog):
-    def __init__(self, paths):
+    def __init__(self, parents, paths):
         super().__init__()
-        self.resize(980, 70 + len(paths) * 30)
+        if paths is None:
+            paths = os.listdir(parents.dir.dir)
+            filter(lambda x: os.path.isfile(x), paths)
+            paths = list(map(lambda x: os.path.join(parents.dir.dir, x), paths))
+            # for i in range(len(paths)): paths[i] = os.path.join(parents.dir.dir, paths[i])
+        y = 70 + len(paths) * 30
+        self.resize(960, y if y <= 800 else 800)
         self.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
         self.setWindowTitle("python记事本 - 文件统计")
         self.table = QTableWidget(len(paths) + 1, 8, self)
@@ -548,10 +553,11 @@ class ShowTextDialog(QDialog):
         self.setWindowTitle(title)
         self.setStyleSheet(WIDGET_STYLE_SHEET)
         self.text = PlainTextEditWithLineNum(self)
-        self.text.resize(500, 400)
+        self.text.resize(500 - int(self.text.lineNumberArea.width() / 5), 400)
         self.text.setFont(FONT)
         self.text.append(string)
         self.text.move(int(self.text.lineNumberArea.width() / 5), 0)
+        self.text.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.text.setFrameShape(QFrame.NoFrame)
         self.text.goToLine(1)
         self.exec()
@@ -566,15 +572,16 @@ class FileTreeWidget(QFrame):
     def __init__(self, parents):
         super().__init__(parents)
         self.parents = parents
-        self.initUI()
+        self.set_dir(os.path.dirname(self.parents.paths[0]))
+        self.show()
 
-    def initUI(self):
-        # self.setGeometry(self.left, self.top, self.width, self.height)
+    def set_dir(self, dir_):
+        self.dir = dir_
         self.model = QFileSystemModel()
-        self.model.setRootPath(QDir(os.path.dirname(self.parents.paths[0])).rootPath())
+        self.model.setRootPath(QDir(dir_).rootPath())
         self.tree = QTreeView(self)
         self.tree.setModel(self.model)
-        self.tree.setRootIndex(self.model.index(os.path.dirname(self.parents.paths[0])))
+        self.tree.setRootIndex(self.model.index(dir_))
         self.tree.setAnimated(False)
         self.tree.setIndentation(10)
         self.tree.setSortingEnabled(True)
@@ -590,29 +597,6 @@ class FileTreeWidget(QFrame):
         windowLayout.addWidget(self.tree)
         self.tree.doubleClicked.connect(self.file_name)
         self.setLayout(windowLayout)
-        self.show()
-
-    # def set_dir(self, dir):
-    #     self.model = QFileSystemModel()
-    #     self.model.setRootPath(QDir(dir).rootPath())
-    #     self.tree = QTreeView(self)
-    #     self.tree.setModel(self.model)
-    #     self.tree.setRootIndex(self.model.index(dir))
-    #     self.tree.setAnimated(False)
-    #     self.tree.setIndentation(10)
-    #     self.tree.setSortingEnabled(True)
-    #     self.tree.setFrameShape(QFrame.NoFrame)
-    #     font = FONT_
-    #     font.setPointSize(9)
-    #     self.tree.setFont(font)
-    #     font.setPointSize(12)
-    #     self.tree.resize(self.width(), self.height())
-    #     self.setFrameShape(QFrame.NoFrame)
-    #     # print(self.tree)
-    #     windowLayout = QVBoxLayout()
-    #     windowLayout.addWidget(self.tree)
-    #     self.tree.doubleClicked.connect(self.file_name)
-    #     self.setLayout(windowLayout)
 
     def file_name(self, model_index: QModelIndex):
         # print(self.model.filePath(model_index))  # 输出文件的地址。
@@ -795,6 +779,133 @@ class ToolTip(QFrame):
         exit_ = self.btn(".\\icon\\exit.png", 32, 32, 0, 440, "退出")
         exit_.clicked.connect(QApplication.instance().quit)
         # new.move(0)
+
+
+class Question(QDialog):
+    def __init__(self, title="", questions=""):
+        super().__init__()
+        self.resize(200, 93)
+        self.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
+        self.setWindowTitle(title)
+        self.setStyleSheet("background-color:white;")
+        self.inputLine = QLineEdit(self)
+        self.inputLine.setFont(QFont("Microsoft YaHei UI", 9))
+        self.inputLine.move(10, 30)
+        self.inputLine.resize(175, 25)
+        self.inputLine.setStyleSheet("""border-radius:3px;
+    border:2px solid rgb(50, 93, 136);
+    font-family:Microsoft YaHei UI;
+    selection-background-color:rgb(151, 198, 235);
+    selection-color:rgb(0, 0, 0);""")
+        l = QLabel(questions, self)
+        l.setFont(QFont("Microsoft YaHei UI", 9))
+        l.move(10, 10)
+        self.result = ("", False)
+        ok = OutlineButton("确定", self)
+        ok.move(60, 60)
+        ok.resize(60, 25)
+        ok.setStyleSheet(STYLE_SHEET)
+        ok.clicked.connect(self.ok)
+        cancel = OutlineButton("取消", self)
+        cancel.move(125, 60)
+        cancel.resize(60, 25)
+        cancel.setStyleSheet(STYLE_SHEET)
+        cancel.clicked.connect(self.cancel)
+        self.exec()
+
+    def ok(self):
+        self.result = (self.inputLine.text(), True)
+        self.close()
+
+    def cancel(self):
+        self.result = (self.inputLine.text(), False)
+        self.close()
+
+
+def question(title, question):
+    window = Question(title, question)
+    return window.result
+
+
+class information(QDialog):
+    def __init__(self, title="", questions=""):
+        super().__init__()
+        self.resize(200, 93)
+        self.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
+        self.setWindowTitle(title)
+        self.setStyleSheet("background-color:white;")
+        l = QLabel(questions, self)
+        l.setFont(QFont("Microsoft YaHei UI", 9))
+        l.move(50, 17)
+        photo = QLabel("", self)
+        photo.setPixmap(QPixmap(".\\icon\\information.png"))
+        photo.move(10, 10)
+        cancel = OutlineButton("确定", self)
+        cancel.move(125, 60)
+        cancel.resize(60, 25)
+        cancel.setStyleSheet(STYLE_SHEET)
+        cancel.clicked.connect(self.close)
+        self.exec()
+
+
+class critical(QDialog):
+    def __init__(self, title="", questions=""):
+        super().__init__()
+        self.resize(200, 93)
+        self.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
+        self.setWindowTitle(title)
+        self.setStyleSheet("background-color:white;")
+        l = QLabel(questions, self)
+        l.setFont(QFont("Microsoft YaHei UI", 9))
+        l.move(50, 17)
+        photo = QLabel("", self)
+        photo.setPixmap(QPixmap(".\\icon\\error.png"))
+        photo.move(10, 10)
+        cancel = OutlineButton("确定", self)
+        cancel.move(125, 60)
+        cancel.resize(60, 25)
+        cancel.setStyleSheet(STYLE_SHEET)
+        cancel.clicked.connect(self.close)
+        self.exec()
+
+
+class Ok(QDialog):
+    def __init__(self, title="", questions=""):
+        super().__init__()
+        self.resize(200, 93)
+        self.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
+        self.setWindowTitle(title)
+        self.setStyleSheet("background-color:white;")
+        l = QLabel(questions, self)
+        l.setFont(QFont("Microsoft YaHei UI", 9))
+        l.move(50, 17)
+        photo = QLabel("", self)
+        photo.setPixmap(QPixmap(".\\icon\\question.png"))
+        photo.move(10, 10)
+        self.result = False
+        ok = OutlineButton("确定", self)
+        ok.move(60, 60)
+        ok.resize(60, 25)
+        ok.setStyleSheet(STYLE_SHEET)
+        ok.clicked.connect(self.ok)
+        cancel = OutlineButton("取消", self)
+        cancel.move(125, 60)
+        cancel.resize(60, 25)
+        cancel.setStyleSheet(STYLE_SHEET)
+        cancel.clicked.connect(self.cancel)
+        self.exec()
+
+    def ok(self):
+        self.result = True
+        self.close()
+
+    def cancel(self):
+        self.result = False
+        self.close()
+
+
+def ok(title, questions):
+    return Ok(title, questions).result
 
 
 class OpacityChangeWindow(QScrollArea):

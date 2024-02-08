@@ -1,5 +1,6 @@
 # !/usr/bin/python3
 # coding: GBK
+import os
 import random
 import subprocess
 import webbrowser
@@ -43,31 +44,6 @@ def add_command(parents: QMenuBar, label: str = '', command=lambda: None, icon: 
     act.triggered.connect(command)
     parents.addAction(act)
     return act
-
-
-def critical(title, message):
-    messageBox = QMessageBox(QMessageBox.Icon.Critical, title, message)
-    messageBox.setStyleSheet(WIDGET_STYLE_SHEET)
-    messageBox.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
-    btn = OutlineButton("确定", messageBox)
-    btn.resize(80, 25)
-    Qyes = messageBox.addButton(btn, QMessageBox.YesRole)
-    # Qno = messageBox.addButton(self.tr("忽略"), QMessageBox.NoRole)
-    messageBox.exec_()
-
-
-def information(title, message):
-    messageBox = QMessageBox(QMessageBox.Icon.Information, title, message)
-    messageBox.setStyleSheet(WIDGET_STYLE_SHEET)
-    messageBox.setWindowIcon(QIcon(".\\icon\\notepad.ico"))
-    btn = OutlineButton("确定", messageBox)
-    btn.resize(80, 30)
-    Qyes = messageBox.addButton(btn, QMessageBox.YesRole)
-    # Qno = messageBox.addButton(self.tr("忽略"), QMessageBox.NoRole)
-    messageBox.exec_()
-    # if messageBox.clickedButton() == Qyes:
-    #     return True
-    # else:
 
 
 class MainWindow(QMainWindow):
@@ -185,13 +161,14 @@ class MainWindow(QMainWindow):
         except IndexError:
             pass
         if isinstance(self.text[self.note.currentIndex()], TextEdit):
-            for i in self.disabled:
-                i.setDisabled(False)
-            # map(lambda i: i.setDisabled(False), self.disabled)
+            # for i in self.disabled:
+            #     i.setDisabled(False)
+            map(lambda i: i.setDisabled(False), self.disabled)
         else:
-            for i in self.disabled:
-                i.setDisabled(True)
-            # map(lambda i: i.setDisabled(True), self.disabled)
+            # for i in self.disabled:
+            #     i.setDisabled(True)
+            map(lambda i: i.setDisabled(True), self.disabled)
+        QApplication.processEvents()
 
     def open_dir(self):
         path = FILEDIALOG.getExistingDirectory()
@@ -267,7 +244,7 @@ class MainWindow(QMainWindow):
     def zoom(self, add: int):
         global FONT
         if add == 0:
-            FONT.setPointSize(12)
+            FONT.setPointSize(int(FONT_SIZE))
         else:
             size = FONT.pointSize() + add
             size = size if size >= LAST_FONT_SIZE else size + 1
@@ -276,15 +253,17 @@ class MainWindow(QMainWindow):
         for i in self.text:
             i.text.setFont(FONT)
             i.text.update_number()
-        self.zoomed.setText(f"  {int(FONT.pointSize() * 100 / 12)}%  ")
+        self.zoomed.setText(f"  {int(FONT.pointSize() * 100 / int(FONT_SIZE))}%  ")
 
+    # noinspection PyTypeChecker
     def add_menu(self):
         file = add_cascade(self.menu, "文件(F)")
         add_command(file, label="新建(N)", shortcut="Ctrl+N", command=self.new)
-        add_command(file, label="新建窗口", command=lambda: os.system(sys.argv[0]))
+        add_command(file, label="新建窗口",
+                    command=lambda: threading.Thread(target=subprocess.Popen, args=(sys.argv[0],)).start())
         file.addSeparator()
         add_command(file, label="打开(O)", shortcut="Ctrl+O",
-                    command=lambda: threading.Thread(target=self.open).start())
+                    command=self.open)
         add_command(file, label="打开文件夹", command=self.open_dir)
         encoding = add_cascade(file, label="用...打开")
         encodings = ("ANSI", "ASCII", "GBK", "GB2312", "UTF-8", "UTF-16", "Latin-1")
@@ -304,14 +283,18 @@ class MainWindow(QMainWindow):
         info = add_cascade(file, label="文件信息")
         self.disabled += [
             add_command(info, label="文本长度", command=lambda: information("文本长度",
-                                                                            f"当前文本长度为: {len(self.text[self.note.currentIndex()].toText())}")),
+                                                                            f"当前文本长度为: {len(self.text[self.note.currentIndex()].toText())}"),
+                        shortcut="Ctrl+L"),
             add_command(info, label="文本行数", command=lambda: information("文本行数",
                                                                             "当前文本行数为: {}".format(self.text[
                                                                                 self.note.currentIndex()].toText().count(
                                                                                 '\n'))))]
-        add_command(info, label="文件统计", command=lambda: FileStatistic(self.paths))
+        add_command(info, label="文件统计", command=lambda: FileStatistic(self, self.paths))
+        add_command(info, label="文件夹内文件统计",
+                    command=lambda: FileStatistic(self,None))
         self.disabled.append(
-            add_command(file, label="词频统计", command=lambda: threading.Thread(target=self.lcut).start()))
+            add_command(file, label="词频统计", command=lambda: threading.Thread(
+                target=information("词频统计", "请耐心等待数秒钟")).start() or self.lcut()))
         file.addSeparator()
         self.disabled += [add_command(file, label="保存(S)", shortcut="Ctrl+S", command=self._save),
                           add_command(file, label="全部保存", command=self._save_all),
@@ -342,7 +325,7 @@ class MainWindow(QMainWindow):
             self.disabled.append(add_command(h, label=text, command=command))
         self.disabled += [
             add_command(edit, label="跳转到行", command=lambda: self.text[self.note.currentIndex()].text.goToLine(
-                QInputDialog.getText(MSG_WIDGET, "跳转", "请输入跳转到行: ")), shortcut="Ctrl+G"),
+                question("跳转", "请输入跳转到行: ")), shortcut="Ctrl+G"),
             add_command(edit, label="跳转到开头", command=lambda: self.text[self.note.currentIndex()].text.goToLine(1),
                         shortcut="Home"),
             add_command(edit, label="跳转到结尾", command=lambda: self.text[self.note.currentIndex()].text.goToEnd(),
@@ -623,9 +606,9 @@ Copyright(2023)"""))
         if selected != '':
             webbrowser.open(f"https://cn.bing.com/search?q={selected}")
         else:
-            keyword = QInputDialog(MSG_WIDGET).getText(MSG_WIDGET, 'web上搜索', '请输入搜索的内容:')[0]
-            if keyword != '':
-                webbrowser.open(WEB.replace("$KEYWORD$", ""))
+            keyword = question('web上搜索', '请输入搜索的内容:')
+            if keyword[1]:
+                webbrowser.open(WEB.replace("$KEYWORD$", keyword[0]))
 
     def cut(self):
         text = self.text[self.note.currentIndex()].text.textCursor()
@@ -660,7 +643,8 @@ Copyright(2023)"""))
         if path[-1] != "":
             for i in path[0]:
                 self.paths.append(i)
-                threading.Thread(target=self.start).start()
+                self.start()
+                # threading.Thread(target=self.start).start()
             self.note.setCurrentIndex(self.note.count() - 1)
 
     def open_as(self, encoding):
@@ -741,7 +725,7 @@ Copyright(2023)"""))
             else:
                 text = TextEdit(self)
             # text.resize(self.note.width(), self.note.height())
-            text.append(read)
+            threading.Thread(target=text.append, args=(read,)).start()
             with open('.\\style\\font.tmp', 'rt') as fo:
                 FONT_FAMILY, FONT_SIZE = FONT_TEXT.match(fo.read()).groups()
             FONT.setPointSize(eval(FONT_SIZE))
@@ -751,15 +735,16 @@ Copyright(2023)"""))
             self.note.addTab(text, os.path.basename(self.paths[-1]))
             self.text.append(text)
             self.tab_button.append(TabButtonWidget(self, self.note.count() - 1))
-            self.note.tabBar().setTabButton(self.note.count() - 1, self.right, self.tab_button[-1])
+            threading.Thread(target=lambda: self.note.tabBar().setTabButton(self.note.count() - 1, self.right,
+                                                                            self.tab_button[-1])).start()
             self.setWindowTitle(f"python记事本 - {os.path.basename(self.paths[self.note.currentIndex()])}")
             if isinstance(self.text[-1], TextEdit):
                 self.text[-1].text.goToLine(1)
                 self.text[-1].resize(self.note.width() - int(self.text[-1].text.lineNumberArea.width() / 5) - 1,
                                      self.note.height() - 45)
             self.statusBar().showMessage(self.paths[-1])
-            if os.path.splitext(self.paths[-1])[-1] in (".py", ".pyw", ".pyi"):
-                PythonHighlighter(self.text[-1].text.document())
+            # if os.path.splitext(self.paths[-1])[-1] in (".py", ".pyw", ".pyi"):
+            #     PythonHighlighter(self.text[-1].text.document())
             #     print(1)
             #     self.highlight(self.text[-1].text)
             # self.text[-1].text.setFont(FONT)
